@@ -184,7 +184,7 @@
         
         <form id="login-form">
             <div style="text-align: left; margin-bottom: 16px;">
-                <label for="login-employee-select" style="font-size: 0.9rem; font-weight: 600; color: #475569; display: block; margin-bottom: 6px;">Pilih Pegawai</label>
+                <label for="login-employee-select" style="font-size: 0.9rem; font-weight: 600; color: #475569; display: block; margin-bottom: 6px;">Nama Pegawai</label>
                 <select id="login-employee-select" required style="width: 100%; border: 1px solid rgba(15, 23, 42, .14); border-radius: 14px; padding: 12px 14px; font-size: 1rem; color: #0f172a; background: #f8fafc; outline: none; transition: all 0.2s ease;">
                     <option value="">-- Pilih Nama --</option>
                 </select>
@@ -215,6 +215,9 @@
                 </div>
             </div>
             <div id="login-error" style="color: #ef4444; font-size: 0.9rem; font-weight: 600; margin-top: -12px; margin-bottom: 16px;" class="hidden"></div>
+            <div style="margin-bottom: 16px; text-align: right;">
+                <a href="#" onclick="openChangePinModal(event)" style="font-size:0.9rem; color:#10b981; font-weight:600; text-decoration:none;">Ganti PIN?</a>
+            </div>
             <button type="submit" class="primary-btn" style="width: 100%; font-size: 1.05rem; padding: 14px;">Masuk Kerja</button>
         </form>
     </div>
@@ -244,7 +247,7 @@
                 </div>
             </div>
             <button type="button" class="secondary-btn" onclick="logoutEmployee()" style="width:100%; padding:8px 12px; font-size:0.9rem; border-color:#fee2e2; color:#ef4444; background:#fffcfc; display:flex; align-items:center; justify-content:center; gap:8px;">
-                <span>🚪</span> Keluar Kerja
+                <span>🚪</span> Keluar
             </button>
         </div>
     </aside>
@@ -274,8 +277,16 @@
             <input type="number" name="price" id="field-price" required />
             <label>Harga Modal</label>
             <input type="number" name="modal" id="field-modal" />
-            <label>Stok</label>
-            <input type="number" name="stock" id="field-stock" />
+            <label>Stok Saat Ini</label>
+            <input type="number" id="field-current-stock" disabled style="background: #cbd5e1; cursor: not-allowed;" value="0" />
+            
+            <label>Tambah Stok</label>
+            <input type="number" id="field-add-stock" placeholder="Masukkan jumlah stok tambahan" value="0" />
+
+            <label>Outlet</label>
+            <select id="field-outlet" style="width:100%; border:1px solid rgba(15, 23, 42, .14); border-radius:14px; padding:12px 14px; margin-top:6px; font-size:1rem; color:#0f172a; background:#f8fafc; outline:none;">
+            </select>
+
             <label>Gambar Produk</label>
             <input type="file" name="image" id="field-image" accept="image/*" />
             <div id="product-image-preview" style="margin-top:8px;color:#475569;font-size:.92rem;"></div>
@@ -356,6 +367,42 @@
                 <strong id="payment-total-label" style="font-size: 1.4rem; color: #0f172a; font-weight: 800;">Rp 0</strong>
             </div>
             
+            <label for="payment-method-select" style="display: block; font-size: .9rem; font-weight: 600; color: #475569; margin-bottom: 8px;">Metode Pembayaran</label>
+            <select id="payment-method-select" required style="width: 100%; border: 1px solid rgba(15, 23, 42, .14); border-radius: 14px; padding: 12px 14px; font-size: 1rem; color: #0f172a; background: #f8fafc; outline: none; margin-bottom: 16px;">
+                <option value="cash">Cash (Uang Tunai)</option>
+                <option value="qr">QRIS (QR)</option>
+                <option value="tf">Transfer Bank (TF)</option>
+            </select>
+
+            <div id="qr-payment-details" class="hidden" style="margin-top: -8px; margin-bottom: 16px; text-align: center; background: #f0fdf4; padding: 16px; border-radius: 16px; border: 1px solid rgba(22,163,74,.15);">
+                <p style="margin: 0 0 10px; color: #166534; font-weight: bold; font-size: 0.95rem;">Scan QRIS LapakYunita:</p>
+                <img src="/qris_payment.png" alt="QRIS Payment" style="width: 200px; height: 200px; object-fit: cover; border-radius: 12px; border: 2px solid #16a34a; box-shadow: 0 10px 25px rgba(22,163,74,0.15);" />
+            </div>
+
+            <div id="tf-payment-details" class="hidden" style="margin-top: -8px; margin-bottom: 16px; background: #eff6ff; padding: 16px; border-radius: 16px; border: 1px solid rgba(37,99,235,.15); font-size: 0.9rem;">
+                <p style="margin: 0 0 10px; color: #1e40af; font-weight: bold; font-size: 0.95rem;">Transfer ke Rekening Resmi:</p>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <div style="border-bottom: 1px dashed rgba(37,99,235,0.15); padding-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>BCA</strong>: <span style="font-family: monospace; font-size: 1rem; font-weight: 700;">8877-6655-44</span><br/>
+                            <span style="color:#64748b; font-size:0.8rem;">a/n Lapak Yunita</span>
+                        </div>
+                    </div>
+                    <div style="border-bottom: 1px dashed rgba(37,99,235,0.15); padding-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>Mandiri</strong>: <span style="font-family: monospace; font-size: 1rem; font-weight: 700;">123-00-998877-6</span><br/>
+                            <span style="color:#64748b; font-size:0.8rem;">a/n Lapak Yunita</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>BRI</strong>: <span style="font-family: monospace; font-size: 1rem; font-weight: 700;">0012-01-998877-50-3</span><br/>
+                            <span style="color:#64748b; font-size:0.8rem;">a/n Lapak Yunita</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <label for="payment-paid-input" style="display: block; font-size: .9rem; font-weight: 600; color: #475569; margin-bottom: 8px;">Uang Tunai (Bayar)</label>
             <input type="number" id="payment-paid-input" required placeholder="Masukkan jumlah uang" style="width: 100%; border: 1px solid rgba(15, 23, 42, .14); border-radius: 14px; padding: 14px 16px; font-size: 1.3rem; font-weight: 700; color: #0f172a; background: #f8fafc; outline: none; transition: all 0.2s ease;" />
             
@@ -463,6 +510,30 @@
             <div class="modal-actions">
                 <button type="button" class="secondary-btn" onclick="closeModal()">Batal</button>
                 <button type="submit" class="primary-btn">Simpan Outlet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="change-pin-modal" class="modal-backdrop hidden" onclick="closeModal(event)">
+    <div class="modal-pane" onclick="event.stopPropagation()" style="max-width: 400px;">
+        <h3 style="margin: 0 0 16px; font-size: 1.4rem; font-weight: 800; color: #0f172a;">Ganti PIN</h3>
+        <form id="change-pin-form">
+            <label>Nama Pegawai</label>
+            <select id="change-pin-employee-select" required style="width: 100%; border: 1px solid rgba(15, 23, 42, .14); border-radius: 14px; padding: 12px 14px; font-size: 1rem; color: #0f172a; background: #f8fafc; outline: none; margin-bottom: 12px;">
+            </select>
+            
+            <label>PIN Lama</label>
+            <input type="password" id="change-pin-old" maxlength="4" required placeholder="Masukkan PIN lama" style="margin-bottom: 12px;" />
+            
+            <label>PIN Baru (4 Digit)</label>
+            <input type="password" id="change-pin-new" maxlength="4" required placeholder="Masukkan PIN baru" style="margin-bottom: 12px;" />
+            
+            <div id="change-pin-error" style="color: #ef4444; font-size: 0.9rem; font-weight: 600; margin-bottom: 12px;" class="hidden"></div>
+            
+            <div class="modal-actions">
+                <button type="button" class="secondary-btn" onclick="closeModal()">Batal</button>
+                <button type="submit" class="primary-btn">Simpan PIN</button>
             </div>
         </form>
     </div>
@@ -640,6 +711,14 @@ function processPayment(){
     document.getElementById('payment-total-label').innerText = formatRupiah(total);
     const paidInput = document.getElementById('payment-paid-input');
     paidInput.value = total;
+    paidInput.readOnly = false;
+    
+    const methodSelect = document.getElementById('payment-method-select');
+    methodSelect.value = 'cash';
+    document.getElementById('quick-cash-container').style.display = 'grid';
+    
+    document.getElementById('qr-payment-details').classList.add('hidden');
+    document.getElementById('tf-payment-details').classList.add('hidden');
     
     generateQuickCash(total);
     updatePaymentChange();
@@ -657,7 +736,10 @@ function renderProductsAdmin(){
             <article class="product-card">
                 <div class="top">
                     <div class="icon">${renderImageCircle(p.image, p.name) || categoryIcon(p.category)}</div>
-                    <span class="tag">${p.category || 'Umum'}</span>
+                    <div class="meta" style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+                        <span class="tag">${p.category || 'Umum'}</span>
+                        <span class="tag" style="background:#f0fdf4; color:#166534;">${p.outlet?.name || 'Semua Outlet'}</span>
+                    </div>
                 </div>
                 <div>
                     <h3>${p.name}</h3>
@@ -706,23 +788,34 @@ function renderOutlets(){
     fetch('/pos/api/outlets').then(r => r.json()).then(data => {
         OUTLETS = data;
         const container = document.getElementById('outlets-admin');
-        container.innerHTML = data.length ? data.map(out => `
-            <article class="product-card user-card">
-                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-                    <div>${renderImageCircle(out.image, out.name, 48) || '<div style="width:48px;height:48px;border-radius:18px;background:#f0f9ff;display:grid;place-items:center;color:#0284c7;">🏬</div>'}</div>
-                    <div>
-                        <h3>${out.name}</h3>
-                        <div class="meta">${out.address || '-'}${out.kelurahan ? ', ' + out.kelurahan : ''}</div>
+        container.innerHTML = data.length ? data.map(out => {
+            const supervisors = (out.employees || []).filter(e => e.role?.toLowerCase() === 'supervisor').map(e => e.name);
+            const kasirs = (out.employees || []).filter(e => e.role?.toLowerCase() === 'kasir').map(e => e.name);
+            const supervisorText = supervisors.length ? supervisors.join(', ') : '-';
+            const kasirText = kasirs.length ? kasirs.join(', ') : '-';
+            
+            return `
+                <article class="product-card user-card">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                        <div>${renderImageCircle(out.image, out.name, 48) || '<div style="width:48px;height:48px;border-radius:18px;background:#f0f9ff;display:grid;place-items:center;color:#0284c7;">🏬</div>'}</div>
+                        <div>
+                            <h3>${out.name}</h3>
+                            <div class="meta">${out.address || '-'}${out.kelurahan ? ', ' + out.kelurahan : ''}</div>
+                        </div>
                     </div>
-                </div>
-                <div class="meta">Telp: ${out.phone || '-'}</div>
-                <div class="meta">Kode Pos: ${out.kode_pos || '-'}</div>
-                <div class="actions">
-                    <button type="button" class="btn-edit" onclick="openEditOutlet(${out.id})">Edit</button>
-                    <button type="button" class="btn-delete" onclick="deleteOutlet(${out.id})">Hapus</button>
-                </div>
-            </article>
-        `).join('') : '<div class="empty-state">Belum ada data outlet.</div>';
+                    <div class="meta">Telp: ${out.phone || '-'}</div>
+                    <div class="meta">Kode Pos: ${out.kode_pos || '-'}</div>
+                    <div class="meta" style="margin-top: 8px; border-top: 1px dashed rgba(0,0,0,0.05); padding-top: 8px; font-size: 0.9rem;">
+                        <strong>Supervisor:</strong> ${supervisorText}<br/>
+                        <strong>Kasir:</strong> ${kasirText}
+                    </div>
+                    <div class="actions">
+                        <button type="button" class="btn-edit" onclick="openEditOutlet(${out.id})">Edit</button>
+                        <button type="button" class="btn-delete" onclick="deleteOutlet(${out.id})">Hapus</button>
+                    </div>
+                </article>
+            `;
+        }).join('') : '<div class="empty-state">Belum ada data outlet.</div>';
     });
 }
 
@@ -815,6 +908,9 @@ function deleteOutlet(id){
     });
 }
 
+let currentHistoryPage = 1;
+const historyPerPage = 10;
+
 function renderReports(){
     document.getElementById('page-content').innerHTML = `
         <div style="display:grid;gap:24px;">
@@ -822,7 +918,10 @@ function renderReports(){
                 <div class="report-summary-card">
                     <div class="label">Total Pendapatan</div>
                     <div class="value" id="gross-sales">Rp 0</div>
-                    <div class="subtitle">Jumlah seluruh penjualan</div>
+                    <div style="font-size:0.9rem; margin-top:8px; display:flex; flex-direction:column; gap:4px; border-top:1px solid rgba(0,0,0,0.05); padding-top:8px;">
+                        <div style="display:flex; justify-content:space-between;"><span>Offline (Cash):</span><strong id="gross-sales-offline" style="color: #64748b;">Rp 0</strong></div>
+                        <div style="display:flex; justify-content:space-between;"><span>Online (QR & TF):</span><strong id="gross-sales-online" style="color: #64748b;">Rp 0</strong></div>
+                    </div>
                 </div>
                 <div class="report-summary-card">
                     <div class="label">Total Transaksi</div>
@@ -843,6 +942,7 @@ function renderReports(){
                 <div class="report-card">
                     <h3>Riwayat Transaksi</h3>
                     <div id="transaction-history"></div>
+                    <div id="history-pagination" style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; font-size:0.9rem;"></div>
                 </div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
@@ -853,81 +953,344 @@ function renderReports(){
                     <div class="report-row"><div class="report-label">Total Keuntungan</div><div class="report-value" id="profit-value">Rp 0</div></div>
                     <div class="note-text">*Biaya operasional belum termasuk dalam perhitungan ini.</div>
                 </div>
-                <div class="info-card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
-                    <div>
-                        <div class="label">Periode</div>
-                        <div class="value" id="report-period"></div>
+                <div class="info-card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;width:100%;">
+                    <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                        <div>
+                            <div class="label">Dari Tanggal</div>
+                            <input type="date" id="report-start-date" style="border:1px solid rgba(15,23,42,.12);border-radius:12px;padding:8px 12px;font-size:0.95rem;outline:none;background:#f8fafc;margin-top:4px;" />
+                        </div>
+                        <div>
+                            <div class="label">Sampai Tanggal</div>
+                            <input type="date" id="report-end-date" style="border:1px solid rgba(15,23,42,.12);border-radius:12px;padding:8px 12px;font-size:0.95rem;outline:none;background:#f8fafc;margin-top:4px;" />
+                        </div>
                     </div>
-                    <button type="button" class="export-btn">Export</button>
+                    <div>
+                        <div class="label">Filter Tipe</div>
+                        <select id="report-payment-filter" style="border:1px solid rgba(15,23,42,.12);border-radius:12px;padding:8px 12px;font-size:0.95rem;outline:none;background:#f8fafc;margin-top:4px;">
+                            <option value="all">Semua (Offline & Online)</option>
+                            <option value="offline">Offline (Cash)</option>
+                            <option value="online">Online (QR & TF)</option>
+                        </select>
+                    </div>
+                    <button type="button" class="export-btn" onclick="exportReportToPdf()">Export ke PDF</button>
                 </div>
             </div>
         </div>
     `;
 
     Promise.all([loadProducts(), fetch('/pos/api/transactions').then(r => r.json())]).then(([_, transactions]) => {
-        window.CURRENT_TRANSACTIONS = transactions;
-        const itemCount = transactions.reduce((sum, tx) => sum + (tx.items || []).reduce((count, item) => count + (item.qty || 0), 0), 0);
-        const grossSales = transactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
-        const productSales = transactions.reduce((map, tx) => {
-            (tx.items || []).forEach(item => {
-                const id = item.product_id || item.id;
-                map[id] = map[id] || { name: item.name, qty: 0, revenue: 0 };
-                map[id].qty += item.qty || 0;
-                map[id].revenue += (item.qty || 0) * (item.price || 0);
-            });
-            return map;
-        }, {});
-        const sortedProducts = Object.values(productSales).sort((a, b) => b.qty - a.qty).slice(0, 5);
-        const maxQty = sortedProducts[0]?.qty || 1;
-        const transactionCount = transactions.length;
-        const costPrice = transactions.reduce((sum, tx) => {
-            return sum + (tx.items || []).reduce((itemSum, item) => {
-                const product = PRODUCTS.find(p => p.id === item.product_id);
-                return itemSum + (item.qty || 0) * (product?.modal || 0);
-            }, 0);
+        window.ALL_TRANSACTIONS = transactions;
+        window.CURRENT_TRANSACTIONS = transactions; // for viewing invoices
+        currentHistoryPage = 1;
+        
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const formatYYYYMMDD = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        
+        document.getElementById('report-start-date').value = formatYYYYMMDD(firstDay);
+        document.getElementById('report-end-date').value = formatYYYYMMDD(today);
+        
+        document.getElementById('report-payment-filter').addEventListener('change', updateReportData);
+        document.getElementById('report-start-date').addEventListener('change', updateReportData);
+        document.getElementById('report-end-date').addEventListener('change', updateReportData);
+        
+        updateReportData();
+    });
+}
+
+function updateReportData() {
+    const allTransactions = window.ALL_TRANSACTIONS || [];
+    const filterVal = document.getElementById('report-payment-filter').value;
+    const startVal = document.getElementById('report-start-date').value;
+    const endVal = document.getElementById('report-end-date').value;
+    
+    let filteredTransactions = allTransactions;
+    
+    // Filter by payment method
+    if (filterVal === 'offline') {
+        filteredTransactions = allTransactions.filter(tx => !tx.payment_method || tx.payment_method === 'cash');
+    } else if (filterVal === 'online') {
+        filteredTransactions = allTransactions.filter(tx => tx.payment_method === 'qr' || tx.payment_method === 'tf');
+    }
+    
+    // Filter by start date
+    if (startVal) {
+        const startDate = new Date(startVal);
+        startDate.setHours(0, 0, 0, 0);
+        filteredTransactions = filteredTransactions.filter(tx => {
+            const txDate = new Date(tx.created_at);
+            return txDate >= startDate;
+        });
+    }
+    
+    // Filter by end date
+    if (endVal) {
+        const endDate = new Date(endVal);
+        endDate.setHours(23, 59, 59, 999);
+        filteredTransactions = filteredTransactions.filter(tx => {
+            const txDate = new Date(tx.created_at);
+            return txDate <= endDate;
+        });
+    }
+    
+    const itemCount = filteredTransactions.reduce((sum, tx) => sum + (tx.items || []).reduce((count, item) => count + (item.qty || 0), 0), 0);
+    const grossSales = filteredTransactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
+    const productSales = filteredTransactions.reduce((map, tx) => {
+        (tx.items || []).forEach(item => {
+            const id = item.product_id || item.id;
+            map[id] = map[id] || { name: item.name, qty: 0, revenue: 0 };
+            map[id].qty += item.qty || 0;
+            map[id].revenue += (item.qty || 0) * (item.price || 0);
+        });
+        return map;
+    }, {});
+    const sortedProducts = Object.values(productSales).sort((a, b) => b.qty - a.qty).slice(0, 5);
+    const maxQty = sortedProducts[0]?.qty || 1;
+    const transactionCount = filteredTransactions.length;
+    const costPrice = filteredTransactions.reduce((sum, tx) => {
+        return sum + (tx.items || []).reduce((itemSum, item) => {
+            const product = PRODUCTS.find(p => p.id === item.product_id);
+            return itemSum + (item.qty || 0) * (product?.modal || 0);
         }, 0);
-        const profit = grossSales - costPrice;
+    }, 0);
+    const profit = grossSales - costPrice;
 
-        document.getElementById('gross-sales').innerText = formatRupiah(grossSales);
-        document.getElementById('transaction-count').innerText = `${transactionCount} transaksi`;
-        document.getElementById('items-sold').innerText = `${itemCount} item`;
-        document.getElementById('profit-sales').innerText = formatRupiah(grossSales);
-        document.getElementById('cost-price').innerText = formatRupiah(costPrice);
-        document.getElementById('profit-value').innerText = formatRupiah(profit);
+    document.getElementById('gross-sales').innerText = formatRupiah(grossSales);
+    document.getElementById('transaction-count').innerText = `${transactionCount} transaksi`;
+    document.getElementById('items-sold').innerText = `${itemCount} item`;
+    document.getElementById('profit-sales').innerText = formatRupiah(grossSales);
+    document.getElementById('cost-price').innerText = formatRupiah(costPrice);
+    document.getElementById('profit-value').innerText = formatRupiah(profit);
 
-        const topProductsHtml = sortedProducts.length ? sortedProducts.map(prod => `
-            <div class="report-product">
-                <div style="flex:1;">
-                    <div style="font-weight:700;color:#0f172a;">${prod.name}</div>
-                    <div class="product-bar"><div class="product-bar-fill" style="width:${Math.round((prod.qty / maxQty) * 100)}%"></div></div>
-                </div>
-                <div style="text-align:right;min-width:90px;">
-                    <div style="font-weight:700;color:#0f172a;">${prod.qty} item</div>
-                    <div style="color:#64748b;font-size:.95rem;">${formatRupiah(prod.revenue)}</div>
-                </div>
+    const topProductsHtml = sortedProducts.length ? sortedProducts.map(prod => `
+        <div class="report-product">
+            <div style="flex:1;">
+                <div style="font-weight:700;color:#0f172a;">${prod.name}</div>
+                <div class="product-bar"><div class="product-bar-fill" style="width:${Math.round((prod.qty / maxQty) * 100)}%"></div></div>
             </div>
-        `).join('') : '<div class="empty-state">Belum ada data produk terjual.</div>';
-        document.getElementById('top-products').innerHTML = topProductsHtml;
+            <div style="text-align:right;min-width:90px;">
+                <div style="font-weight:700;color:#0f172a;">${prod.qty} item</div>
+                <div style="color:#64748b;font-size:.95rem;">${formatRupiah(prod.revenue)}</div>
+            </div>
+        </div>
+    `).join('') : '<div class="empty-state">Belum ada data produk terjual.</div>';
+    document.getElementById('top-products').innerHTML = topProductsHtml;
 
-        const historyHtml = transactions.length ? transactions.map(tx => `
+    // Offline / Online Breakdown (Always calculated on all transactions)
+    const grossOffline = allTransactions.filter(tx => !tx.payment_method || tx.payment_method === 'cash').reduce((sum, tx) => sum + (tx.total || 0), 0);
+    const grossOnline = allTransactions.filter(tx => tx.payment_method === 'qr' || tx.payment_method === 'tf').reduce((sum, tx) => sum + (tx.total || 0), 0);
+    document.getElementById('gross-sales-offline').innerText = formatRupiah(grossOffline);
+    document.getElementById('gross-sales-online').innerText = formatRupiah(grossOnline);
+
+    renderHistoryPagination(filteredTransactions);
+}
+
+function renderHistoryPagination(filteredTransactions) {
+    const totalItems = filteredTransactions.length;
+    const totalPages = Math.ceil(totalItems / historyPerPage) || 1;
+    
+    if (currentHistoryPage > totalPages) {
+        currentHistoryPage = totalPages;
+    }
+    if (currentHistoryPage < 1) {
+        currentHistoryPage = 1;
+    }
+    
+    const start = (currentHistoryPage - 1) * historyPerPage;
+    const end = start + historyPerPage;
+    const paginatedTransactions = filteredTransactions.slice(start, end);
+
+    const historyHtml = paginatedTransactions.length ? paginatedTransactions.map(tx => {
+        const methodLabel = tx.payment_method ? tx.payment_method.toUpperCase() : 'CASH';
+        return `
             <div class="transaction-item">
                 <div class="transaction-info">
                     <div class="transaction-id">${tx.trx_id || 'TRX-'+tx.id}</div>
-                    <div class="transaction-meta">${tx.created_at ? new Date(tx.created_at).toLocaleDateString('id-ID') : '-'} • ${((tx.items || []).reduce((sum, item) => sum + (item.qty || 0), 0))} item</div>
+                    <div class="transaction-meta">${tx.created_at ? new Date(tx.created_at).toLocaleDateString('id-ID') : '-'} • ${((tx.items || []).reduce((sum, item) => sum + (item.qty || 0), 0))} item • via <strong>${methodLabel}</strong></div>
                 </div>
                 <div style="display:flex;align-items:center;gap:12px;">
                     <div style="font-weight:700;color:#16a34a;">${formatRupiah(tx.total || 0)}</div>
                     <button class="secondary-btn" style="padding: 6px 12px; font-size: 0.85rem;" onclick="viewTransactionInvoice(${tx.id})">🧾 Struk</button>
                 </div>
             </div>
-        `).join('') : '<div class="empty-state">Belum ada riwayat transaksi.</div>';
-        document.getElementById('transaction-history').innerHTML = historyHtml;
+        `;
+    }).join('') : '<div class="empty-state">Belum ada riwayat transaksi.</div>';
+    document.getElementById('transaction-history').innerHTML = historyHtml;
 
-        const today = new Date();
-        const start = new Date(today.getFullYear(), today.getMonth(), 1);
-        const formatDate = d => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-        document.getElementById('report-period').innerText = `${formatDate(start)} - ${formatDate(today)}`;
-    });
+    const paginationContainer = document.getElementById('history-pagination');
+    if (totalItems > 0) {
+        paginationContainer.innerHTML = `
+            <button class="secondary-btn" style="padding: 6px 12px;" ${currentHistoryPage === 1 ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : 'onclick="changeHistoryPage(-1)"'}>Sebelumnya</button>
+            <span>Halaman <strong>${currentHistoryPage}</strong> dari <strong>${totalPages}</strong></span>
+            <button class="secondary-btn" style="padding: 6px 12px;" ${currentHistoryPage === totalPages ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : 'onclick="changeHistoryPage(1)"'}>Selanjutnya</button>
+        `;
+    } else {
+        paginationContainer.innerHTML = '';
+    }
+}
+
+function changeHistoryPage(delta) {
+    currentHistoryPage += delta;
+    const allTransactions = window.ALL_TRANSACTIONS || [];
+    const filterVal = document.getElementById('report-payment-filter').value;
+    const startVal = document.getElementById('report-start-date').value;
+    const endVal = document.getElementById('report-end-date').value;
+    
+    let filteredTransactions = allTransactions;
+    if (filterVal === 'offline') {
+        filteredTransactions = allTransactions.filter(tx => !tx.payment_method || tx.payment_method === 'cash');
+    } else if (filterVal === 'online') {
+        filteredTransactions = allTransactions.filter(tx => tx.payment_method === 'qr' || tx.payment_method === 'tf');
+    }
+    
+    if (startVal) {
+        const startDate = new Date(startVal);
+        startDate.setHours(0, 0, 0, 0);
+        filteredTransactions = filteredTransactions.filter(tx => new Date(tx.created_at) >= startDate);
+    }
+    if (endVal) {
+        const endDate = new Date(endVal);
+        endDate.setHours(23, 59, 59, 999);
+        filteredTransactions = filteredTransactions.filter(tx => new Date(tx.created_at) <= endDate);
+    }
+    
+    renderHistoryPagination(filteredTransactions);
+}
+
+function exportReportToPdf() {
+    const startVal = document.getElementById('report-start-date').value;
+    const endVal = document.getElementById('report-end-date').value;
+    const filterVal = document.getElementById('report-payment-filter').value;
+    
+    const allTransactions = window.ALL_TRANSACTIONS || [];
+    
+    let filteredTransactions = allTransactions;
+    if (filterVal === 'offline') {
+        filteredTransactions = allTransactions.filter(tx => !tx.payment_method || tx.payment_method === 'cash');
+    } else if (filterVal === 'online') {
+        filteredTransactions = allTransactions.filter(tx => tx.payment_method === 'qr' || tx.payment_method === 'tf');
+    }
+    
+    if (startVal) {
+        const startDate = new Date(startVal);
+        startDate.setHours(0, 0, 0, 0);
+        filteredTransactions = filteredTransactions.filter(tx => new Date(tx.created_at) >= startDate);
+    }
+    if (endVal) {
+        const endDate = new Date(endVal);
+        endDate.setHours(23, 59, 59, 999);
+        filteredTransactions = filteredTransactions.filter(tx => new Date(tx.created_at) <= endDate);
+    }
+    
+    const grossSales = filteredTransactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
+    const transactionCount = filteredTransactions.length;
+    const itemCount = filteredTransactions.reduce((sum, tx) => sum + (tx.items || []).reduce((count, item) => count + (item.qty || 0), 0), 0);
+    
+    const costPrice = filteredTransactions.reduce((sum, tx) => {
+        return sum + (tx.items || []).reduce((itemSum, item) => {
+            const product = PRODUCTS.find(p => p.id === item.product_id);
+            return itemSum + (item.qty || 0) * (product?.modal || 0);
+        }, 0);
+    }, 0);
+    const profit = grossSales - costPrice;
+    
+    const printDiv = document.createElement('div');
+    printDiv.id = 'report-print-area';
+    printDiv.style.position = 'absolute';
+    printDiv.style.left = '0';
+    printDiv.style.top = '0';
+    printDiv.style.width = '100%';
+    printDiv.style.padding = '30px';
+    printDiv.style.background = '#fff';
+    printDiv.style.color = '#000';
+    printDiv.style.fontFamily = 'Arial, sans-serif';
+    
+    let filterText = 'Semua (Offline & Online)';
+    if (filterVal === 'offline') filterText = 'Offline (Cash)';
+    if (filterVal === 'online') filterText = 'Online (QR & TF)';
+    
+    printDiv.innerHTML = `
+        <div style="text-align: center; margin-bottom: 25px;">
+            <h2 style="margin: 0; font-size: 1.8rem;">LAPORAN TRANSAKSI PENJUALAN</h2>
+            <h3 style="margin: 5px 0; color: #475569;">Lapak Yunita POS</h3>
+            <p style="margin: 5px 0; font-size: 0.95rem;">Periode: ${startVal || '-'} s/d ${endVal || '-'}</p>
+            <p style="margin: 5px 0; font-size: 0.95rem;">Filter Pembayaran: ${filterText}</p>
+            <hr style="border: 1px dashed #cbd5e1; margin-top: 15px;"/>
+        </div>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 1rem;">
+            <tr>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold; background: #f8fafc;">Total Pendapatan</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right; font-weight: bold; color: #16a34a;">${formatRupiah(grossSales)}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold; background: #f8fafc;">Total Harga Modal</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">${formatRupiah(costPrice)}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold; background: #f8fafc;">Total Keuntungan</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right; font-weight: bold; color: #2563eb;">${formatRupiah(profit)}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; background: #f8fafc;">Total Transaksi</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">${transactionCount} Transaksi</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; background: #f8fafc;">Total Item Terjual</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">${itemCount} Item</td>
+            </tr>
+        </table>
+        
+        <h4 style="margin: 20px 0 10px;">Daftar Transaksi</h4>
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+            <thead>
+                <tr style="background: #f1f5f9;">
+                    <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">ID Transaksi</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">Tanggal</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">Kasir</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: left;">Outlet</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">Metode</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 8px; text-align: right;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${filteredTransactions.map(tx => `
+                    <tr>
+                        <td style="border: 1px solid #cbd5e1; padding: 8px;">${tx.trx_id || 'TRX-'+tx.id}</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 8px;">${tx.created_at ? new Date(tx.created_at).toLocaleString('id-ID') : '-'}</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 8px;">${tx.cashier || '-'}</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 8px;">${tx.outlet || '-'}</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">${(tx.payment_method || 'CASH').toUpperCase()}</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: right; font-weight: bold;">${formatRupiah(tx.total || 0)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+        
+        <div style="margin-top: 40px; text-align: right; font-size: 0.85rem; color: #64748b;">
+            Laporan dicetak pada tanggal: ${new Date().toLocaleString('id-ID')}
+        </div>
+    `;
+    
+    document.body.appendChild(printDiv);
+    
+    const style = document.createElement('style');
+    style.id = 'report-print-style';
+    style.innerHTML = `
+        @media print {
+            body * { visibility: hidden !important; }
+            #report-print-area, #report-print-area * { visibility: visible !important; }
+            #report-print-area { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; display: block !important; }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    window.print();
+    
+    setTimeout(() => {
+        document.body.removeChild(printDiv);
+        document.head.removeChild(style);
+    }, 500);
 }
 
 function closeModal(event){
@@ -937,6 +1300,7 @@ function closeModal(event){
     document.getElementById('outlet-modal').classList.add('hidden');
     document.getElementById('invoice-modal').classList.add('hidden');
     document.getElementById('payment-modal').classList.add('hidden');
+    document.getElementById('change-pin-modal').classList.add('hidden');
 }
 
 function bindEmployeeForm(){
@@ -1005,7 +1369,6 @@ function bindOutletForm(){
     });
 }
 
-
 function openAddProduct(){
     editingProduct = null;
     document.getElementById('modal-title').innerText = 'Tambah Produk';
@@ -1013,8 +1376,14 @@ function openAddProduct(){
     document.getElementById('field-category').value = '';
     document.getElementById('field-price').value = '';
     document.getElementById('field-modal').value = '';
-    document.getElementById('field-stock').value = '';
+    document.getElementById('field-current-stock').value = 0;
+    document.getElementById('field-add-stock').value = 0;
     document.getElementById('field-image').value = '';
+    
+    const outletSelect = document.getElementById('field-outlet');
+    outletSelect.innerHTML = '<option value="">Semua Outlet</option>' + OUTLETS.map(out => `<option value="${out.id}">${out.name}</option>`).join('');
+    outletSelect.value = '';
+
     document.getElementById('product-image-preview').innerHTML = '';
     document.getElementById('product-modal').classList.remove('hidden');
 }
@@ -1028,8 +1397,14 @@ function openEditProduct(productId){
     document.getElementById('field-category').value = product.category || '';
     document.getElementById('field-price').value = product.price || '';
     document.getElementById('field-modal').value = product.modal || '';
-    document.getElementById('field-stock').value = product.stock || '';
+    document.getElementById('field-current-stock').value = product.stock || 0;
+    document.getElementById('field-add-stock').value = 0;
     document.getElementById('field-image').value = '';
+    
+    const outletSelect = document.getElementById('field-outlet');
+    outletSelect.innerHTML = '<option value="">Semua Outlet</option>' + OUTLETS.map(out => `<option value="${out.id}" ${out.id === product.outlet_id ? 'selected' : ''}>${out.name}</option>`).join('');
+    outletSelect.value = product.outlet_id || '';
+
     document.getElementById('product-image-preview').innerHTML = product.image ? `<div style="display:flex;align-items:center;gap:10px;"><img src="${resolveImageUrl(product.image)}" style="width:56px;height:56px;border-radius:18px;object-fit:cover;" alt="Gambar Produk" /><span style="color:#475569;">Gambar saat ini ditampilkan. Unggah file baru untuk mengganti.</span></div>` : '';
     document.getElementById('product-modal').classList.remove('hidden');
 }
@@ -1043,7 +1418,16 @@ function bindProductForm(){
         formData.append('category', document.getElementById('field-category').value.trim());
         formData.append('price', parseInt(document.getElementById('field-price').value, 10) || 0);
         formData.append('modal', parseInt(document.getElementById('field-modal').value, 10) || 0);
-        formData.append('stock', parseInt(document.getElementById('field-stock').value, 10) || 0);
+        
+        const currentStock = parseInt(document.getElementById('field-current-stock').value, 10) || 0;
+        const addStock = parseInt(document.getElementById('field-add-stock').value, 10) || 0;
+        formData.append('stock', currentStock + addStock);
+        
+        const outletVal = document.getElementById('field-outlet').value;
+        if (outletVal) {
+            formData.append('outlet_id', outletVal);
+        }
+        
         const imageFile = document.getElementById('field-image').files[0];
         if (imageFile) formData.append('image', imageFile);
         const url = editingProduct ? `/pos/api/products/${editingProduct.id}` : '/pos/api/products';
@@ -1160,8 +1544,38 @@ function updatePaymentChange() {
 function bindPaymentForm(){
     const form = document.getElementById('payment-form');
     const paidInput = document.getElementById('payment-paid-input');
+    const methodSelect = document.getElementById('payment-method-select');
     
     paidInput.addEventListener('input', updatePaymentChange);
+    
+    methodSelect.addEventListener('change', () => {
+        const method = methodSelect.value;
+        const total = CART.reduce((sum, item) => sum + item.qty * item.price, 0);
+        const quickCash = document.getElementById('quick-cash-container');
+        const qrDetails = document.getElementById('qr-payment-details');
+        const tfDetails = document.getElementById('tf-payment-details');
+        
+        if (method === 'qr') {
+            paidInput.value = total;
+            paidInput.readOnly = true;
+            quickCash.style.display = 'none';
+            qrDetails.classList.remove('hidden');
+            tfDetails.classList.add('hidden');
+        } else if (method === 'tf') {
+            paidInput.value = total;
+            paidInput.readOnly = true;
+            quickCash.style.display = 'none';
+            qrDetails.classList.add('hidden');
+            tfDetails.classList.remove('hidden');
+        } else {
+            paidInput.value = total;
+            paidInput.readOnly = false;
+            quickCash.style.display = 'grid';
+            qrDetails.classList.add('hidden');
+            tfDetails.classList.add('hidden');
+        }
+        updatePaymentChange();
+    });
     
     form.addEventListener('submit', async e => {
         e.preventDefault();
@@ -1178,6 +1592,7 @@ function bindPaymentForm(){
                 items:CART,
                 total,
                 paid,
+                payment_method: methodSelect.value,
                 cashier: CURRENT_EMPLOYEE ? CURRENT_EMPLOYEE.name : 'Kasir',
                 outlet: (CURRENT_EMPLOYEE && CURRENT_EMPLOYEE.outlet) ? CURRENT_EMPLOYEE.outlet.name : 'Outlet Pusat'
             })
@@ -1224,6 +1639,54 @@ function updatePinDots() {
     });
 }
 
+function openChangePinModal(event) {
+    if (event) event.preventDefault();
+    const loginSelect = document.getElementById('login-employee-select');
+    const changeSelect = document.getElementById('change-pin-employee-select');
+    
+    // Copy options and value
+    changeSelect.innerHTML = loginSelect.innerHTML;
+    changeSelect.value = loginSelect.value;
+    
+    document.getElementById('change-pin-old').value = '';
+    document.getElementById('change-pin-new').value = '';
+    document.getElementById('change-pin-error').classList.add('hidden');
+    document.getElementById('change-pin-modal').classList.remove('hidden');
+}
+
+function bindChangePinForm() {
+    const form = document.getElementById('change-pin-form');
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const employeeId = document.getElementById('change-pin-employee-select').value;
+        const oldPin = document.getElementById('change-pin-old').value;
+        const newPin = document.getElementById('change-pin-new').value;
+        
+        if (!employeeId) return alert('Silakan pilih nama pegawai.');
+        if (oldPin.length !== 4 || newPin.length !== 4) return alert('PIN harus terdiri dari 4 digit angka.');
+        
+        const res = await fetch('/pos/api/change-pin', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ employee_id: employeeId, old_pin: oldPin, new_pin: newPin })
+        });
+        
+        if (res.ok) {
+            alert('PIN berhasil diperbarui!');
+            closeModal();
+            initLoginScreen();
+        } else {
+            const err = await res.json();
+            const errDiv = document.getElementById('change-pin-error');
+            errDiv.innerText = err.message || 'Gagal mengganti PIN.';
+            errDiv.classList.remove('hidden');
+        }
+    });
+}
+
 async function handleLogin(e) {
     if (e) e.preventDefault();
     const employeeId = document.getElementById('login-employee-select').value;
@@ -1259,7 +1722,7 @@ async function handleLogin(e) {
 }
 
 async function logoutEmployee() {
-    if (!confirm('Apakah Anda yakin ingin keluar kerja?')) return;
+    if (!confirm('Apakah Anda yakin ingin keluar?')) return;
     const res = await fetch('/pos/api/logout', {
         method: 'POST',
         headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
@@ -1292,7 +1755,10 @@ async function initLoginScreen() {
     const employees = await res.json();
     const select = document.getElementById('login-employee-select');
     select.innerHTML = '<option value="">-- Pilih Nama --</option>' + 
-        employees.map(emp => `<option value="${emp.id}">${emp.name} (${emp.role})</option>`).join('');
+        employees.map(emp => {
+            const outletName = emp.outlet ? emp.outlet.name : 'Tanpa Outlet';
+            return `<option value="${emp.id}">${emp.name} (${emp.role} - ${outletName})</option>`;
+        }).join('');
     pinBuffer = '';
     updatePinDots();
     document.getElementById('login-error').classList.add('hidden');
@@ -1324,9 +1790,9 @@ function applyEmployeeRBAC() {
         menuOutlet.classList.remove('hidden');
         menuLaporan.classList.remove('hidden');
     } else if (access === 'supervisor') {
-        menuProduk.classList.remove('hidden');
+        menuProduk.classList.add('hidden');
         menuPegawai.classList.add('hidden');
-        menuOutlet.classList.remove('hidden');
+        menuOutlet.classList.add('hidden');
         menuLaporan.classList.remove('hidden');
     } else {
         menuProduk.classList.add('hidden');
@@ -1342,6 +1808,7 @@ window.addEventListener('DOMContentLoaded', () => {
     bindEmployeeForm();
     bindOutletForm();
     bindPaymentForm();
+    bindChangePinForm();
     loadOutlets();
     
     // Bind login form

@@ -12,15 +12,15 @@ class PosSeeder extends Seeder
 {
     public function run(): void
     {
-        Product::insert([
-            ['name'=>'Nasi Goreng Spesial','price'=>25000,'modal'=>15000,'category'=>'Makanan','stock'=>50,'image'=>'🍳','created_at'=>now(),'updated_at'=>now()],
-            ['name'=>'Es Teh Manis','price'=>5000,'modal'=>2000,'category'=>'Minuman','stock'=>100,'image'=>'🧊','created_at'=>now(),'updated_at'=>now()],
-            ['name'=>'Ayam Bakar','price'=>30000,'modal'=>18000,'category'=>'Makanan','stock'=>30,'image'=>'🍗','created_at'=>now(),'updated_at'=>now()],
-            ['name'=>'Keripik Singkong','price'=>8000,'modal'=>4000,'category'=>'Snack','stock'=>60,'image'=>'🥔','created_at'=>now(),'updated_at'=>now()],
-            ['name'=>'Jus Alpukat','price'=>15000,'modal'=>8000,'category'=>'Minuman','stock'=>40,'image'=>'🥑','created_at'=>now(),'updated_at'=>now()],
-        ]);
-
         $o = Outlet::create(['name'=>'Outlet Pusat','phone'=>'021-1234567','address'=>'Jl. Sudirman No.1','kelurahan'=>'Karet','kode_pos'=>'12920']);
+
+        Product::insert([
+            ['name'=>'Nasi Goreng Spesial','price'=>25000,'modal'=>15000,'category'=>'Makanan','stock'=>50,'image'=>'🍳','outlet_id'=>$o->id,'created_at'=>now(),'updated_at'=>now()],
+            ['name'=>'Es Teh Manis','price'=>5000,'modal'=>2000,'category'=>'Minuman','stock'=>100,'image'=>'🧊','outlet_id'=>$o->id,'created_at'=>now(),'updated_at'=>now()],
+            ['name'=>'Ayam Bakar','price'=>30000,'modal'=>18000,'category'=>'Makanan','stock'=>30,'image'=>'🍗','outlet_id'=>$o->id,'created_at'=>now(),'updated_at'=>now()],
+            ['name'=>'Keripik Singkong','price'=>8000,'modal'=>4000,'category'=>'Snack','stock'=>60,'image'=>'🥔','outlet_id'=>$o->id,'created_at'=>now(),'updated_at'=>now()],
+            ['name'=>'Jus Alpukat','price'=>15000,'modal'=>8000,'category'=>'Minuman','stock'=>40,'image'=>'🥑','outlet_id'=>$o->id,'created_at'=>now(),'updated_at'=>now()],
+        ]);
 
         Employee::create([
             'name' => 'Admin Lapak',

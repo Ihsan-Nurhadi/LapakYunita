@@ -10,7 +10,7 @@ class PosTransaction extends Model
     use HasFactory;
 
     protected $table = 'pos_transactions';
-    protected $fillable = ['trx_id','total','paid','change','cashier','outlet'];
+    protected $fillable = ['trx_id','total','paid','change','payment_method','cashier','outlet'];
 
     public function items()
     {

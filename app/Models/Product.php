@@ -9,5 +9,10 @@ class Product extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name','price','modal','category','stock','image'];
+    protected $fillable = ['name','price','modal','category','stock','image','outlet_id'];
+
+    public function outlet()
+    {
+        return $this->belongsTo(Outlet::class, 'outlet_id');
+    }
 }

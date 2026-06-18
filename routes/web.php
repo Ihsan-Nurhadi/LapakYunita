@@ -28,22 +28,23 @@ Route::prefix('pos/api')->group(function(){
     Route::post('logout', [PosController::class, 'logout']);
     Route::get('me', [PosController::class, 'me']);
     Route::get('employees', [PosController::class, 'employees']);
+    Route::post('change-pin', [PosController::class, 'changePin']);
 });
 
 Route::prefix('pos/api')->middleware('employee.auth')->group(function(){
     Route::get('products', [PosController::class, 'products']);
-    Route::post('products', [PosController::class, 'storeProduct'])->middleware('employee.auth:admin,supervisor');
-    Route::put('products/{product}', [PosController::class, 'updateProduct'])->middleware('employee.auth:admin,supervisor');
-    Route::delete('products/{product}', [PosController::class, 'deleteProduct'])->middleware('employee.auth:admin,supervisor');
+    Route::post('products', [PosController::class, 'storeProduct'])->middleware('employee.auth:admin');
+    Route::put('products/{product}', [PosController::class, 'updateProduct'])->middleware('employee.auth:admin');
+    Route::delete('products/{product}', [PosController::class, 'deleteProduct'])->middleware('employee.auth:admin');
 
     Route::post('employees', [PosController::class, 'storeEmployee'])->middleware('employee.auth:admin');
     Route::put('employees/{employee}', [PosController::class, 'updateEmployee'])->middleware('employee.auth:admin');
     Route::delete('employees/{employee}', [PosController::class, 'deleteEmployee'])->middleware('employee.auth:admin');
 
     Route::get('outlets', [PosController::class, 'outlets']);
-    Route::post('outlets', [PosController::class, 'storeOutlet'])->middleware('employee.auth:admin,supervisor');
-    Route::put('outlets/{outlet}', [PosController::class, 'updateOutlet'])->middleware('employee.auth:admin,supervisor');
-    Route::delete('outlets/{outlet}', [PosController::class, 'deleteOutlet'])->middleware('employee.auth:admin,supervisor');
+    Route::post('outlets', [PosController::class, 'storeOutlet'])->middleware('employee.auth:admin');
+    Route::put('outlets/{outlet}', [PosController::class, 'updateOutlet'])->middleware('employee.auth:admin');
+    Route::delete('outlets/{outlet}', [PosController::class, 'deleteOutlet'])->middleware('employee.auth:admin');
 
     Route::get('transactions', [PosController::class, 'transactions']);
     Route::post('transactions', [PosController::class, 'storeTransaction']);

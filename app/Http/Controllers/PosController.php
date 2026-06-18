@@ -19,7 +19,21 @@ class PosController extends Controller
 
     public function products()
     {
-        return Product::orderBy('name')->get();
+        $query = Product::with('outlet')->orderBy('name');
+        
+        $employeeId = session('employee_id');
+        if ($employeeId) {
+            $employee = Employee::find($employeeId);
+            if ($employee && strtolower($employee->access ?: $employee->role) !== 'admin') {
+                if ($employee->outlet_id) {
+                    $query->where('outlet_id', $employee->outlet_id);
+                } else {
+                    $query->whereNull('outlet_id');
+                }
+            }
+        }
+        
+        return $query->get();
     }
 
     public function storeProduct(Request $r)
@@ -31,6 +45,7 @@ class PosController extends Controller
             'category' => 'nullable|string',
             'stock' => 'nullable|integer',
             'image' => 'nullable|image|max:2048',
+            'outlet_id' => 'nullable|integer|exists:outlets,id',
         ]);
 
         if ($r->hasFile('image')) {
@@ -49,6 +64,7 @@ class PosController extends Controller
             'category' => 'nullable|string',
             'stock' => 'nullable|integer',
             'image' => 'nullable|image|max:2048',
+            'outlet_id' => 'nullable|integer|exists:outlets,id',
         ]);
 
         if ($r->hasFile('image')) {
@@ -74,7 +90,7 @@ class PosController extends Controller
 
     public function outlets()
     {
-        return Outlet::orderBy('name')->get();
+        return Outlet::with('employees')->orderBy('name')->get();
     }
 
     public function storeEmployee(Request $r)
@@ -179,12 +195,33 @@ class PosController extends Controller
 
     public function transactions()
     {
-        return PosTransaction::with('items')->orderByDesc('id')->limit(100)->get();
+        $query = PosTransaction::with('items');
+        
+        $employeeId = session('employee_id');
+        if ($employeeId) {
+            $employee = Employee::with('outlet')->find($employeeId);
+            if ($employee && strtolower($employee->access ?: $employee->role) !== 'admin') {
+                if ($employee->outlet) {
+                    $query->where('outlet', $employee->outlet->name);
+                } else {
+                    $query->where('outlet', '');
+                }
+            }
+        }
+        
+        return $query->orderByDesc('id')->get();
     }
 
     public function storeTransaction(Request $r)
     {
-        $data = $r->validate(['items'=>'required|array','total'=>'required|integer','paid'=>'required|integer','cashier'=>'nullable','outlet'=>'nullable']);
+        $data = $r->validate([
+            'items' => 'required|array',
+            'total' => 'required|integer',
+            'paid' => 'required|integer',
+            'payment_method' => 'required|string|in:cash,qr,tf',
+            'cashier' => 'nullable|string',
+            'outlet' => 'nullable|string'
+        ]);
 
         $employee = null;
         if (session('employee_id')) {
@@ -199,6 +236,7 @@ class PosController extends Controller
             'total' => $data['total'],
             'paid' => $data['paid'],
             'change' => max(0, $data['paid'] - $data['total']),
+            'payment_method' => $data['payment_method'],
             'cashier' => $cashierName,
             'outlet' => $outletName,
         ]);
@@ -261,5 +299,24 @@ class PosController extends Controller
         }
 
         return response()->json($employee);
+    }
+
+    public function changePin(Request $r)
+    {
+        $data = $r->validate([
+            'employee_id' => 'required|integer|exists:employees,id',
+            'old_pin' => 'required|string|size:4|regex:/^[0-9]+$/',
+            'new_pin' => 'required|string|size:4|regex:/^[0-9]+$/',
+        ]);
+        
+        $employee = Employee::find($data['employee_id']);
+        if (!$employee || !\Illuminate\Support\Facades\Hash::check($data['old_pin'], $employee->pin)) {
+            return response()->json(['message' => 'PIN lama yang Anda masukkan salah.'], 422);
+        }
+        
+        $employee->pin = $data['new_pin'];
+        $employee->save();
+        
+        return response()->json(['message' => 'PIN berhasil diperbarui.']);
     }
 }
