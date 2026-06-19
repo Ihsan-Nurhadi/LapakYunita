@@ -218,7 +218,7 @@
             <div style="margin-bottom: 16px; text-align: right;">
                 <a href="#" onclick="openChangePinModal(event)" style="font-size:0.9rem; color:#10b981; font-weight:600; text-decoration:none;">Ganti PIN?</a>
             </div>
-            <button type="submit" class="primary-btn" style="width: 100%; font-size: 1.05rem; padding: 14px;">Masuk Kerja</button>
+            <button type="submit" class="primary-btn" style="width: 100%; font-size: 1.05rem; padding: 14px;">Masuk</button>
         </form>
     </div>
 </div>
@@ -244,6 +244,7 @@
                 <div style="flex:1; min-width:0;">
                     <div style="font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="current-user-name">-</div>
                     <div style="font-size:.9rem;color:#64748b;" id="current-user-role">-</div>
+                    <div style="font-size:.85rem;color:#10b981;font-weight:600;margin-top:2px;" id="current-user-outlet" class="hidden">-</div>
                 </div>
             </div>
             <button type="button" class="secondary-btn" onclick="logoutEmployee()" style="width:100%; padding:8px 12px; font-size:0.9rem; border-color:#fee2e2; color:#ef4444; background:#fffcfc; display:flex; align-items:center; justify-content:center; gap:8px;">
@@ -539,6 +540,15 @@
     </div>
 </div>
 
+<div id="alert-modal" class="modal-backdrop hidden" onclick="closeAlertModal(event)" style="z-index: 9999;">
+    <div class="modal-pane" onclick="event.stopPropagation()" style="max-width: 400px; text-align: center; border-radius: 24px; padding: 32px 24px; display: flex; flex-direction: column; align-items: center; gap: 16px;">
+        <div id="alert-modal-icon" style="font-size: 3rem;">🔔</div>
+        <h3 id="alert-modal-title" style="margin: 0; font-size: 1.3rem; font-weight: 800; color: #0f172a;">Pemberitahuan</h3>
+        <p id="alert-modal-message" style="margin: 0; color: #475569; font-size: 0.98rem; line-height: 1.5; text-align: center; word-break: break-word;"></p>
+        <button type="button" class="primary-btn" onclick="closeAlertModal()" style="width: 100%; margin-top: 12px; padding: 12px 20px;">Mengerti</button>
+    </div>
+</div>
+
 <script>
 const formatRupiah = n => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 const categoryIcon = cat => {
@@ -705,7 +715,7 @@ function updateCartUI(){
 }
 
 function processPayment(){
-    if(!CART.length) return alert('Silakan tambahkan produk ke keranjang terlebih dahulu.');
+    if(!CART.length) return showAlert('Silakan tambahkan produk ke keranjang terlebih dahulu.', 'Keranjang Kosong', '🛒');
     const total = CART.reduce((sum, item) => sum + item.qty * item.price, 0);
     
     document.getElementById('payment-total-label').innerText = formatRupiah(total);
@@ -894,7 +904,7 @@ function deleteEmployee(id){
     if(!confirm('Hapus pegawai ini?')) return;
     fetch(`/pos/api/employees/${id}`, {method:'DELETE', headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}'}}).then(res => {
         if(res.ok) renderEmployees();
-        else alert('Gagal menghapus pegawai.');
+        else showAlert('Gagal menghapus pegawai.', 'Error', '❌');
     });
 }
 
@@ -904,7 +914,7 @@ function deleteOutlet(id){
         if(res.ok) {
             renderOutlets();
             loadOutlets();
-        } else alert('Gagal menghapus outlet.');
+        } else showAlert('Gagal menghapus outlet.', 'Error', '❌');
     });
 }
 
@@ -947,7 +957,7 @@ function renderReports(){
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
                 <div class="report-card">
-                    <div class="section-title">Keuntungan</div>
+                    <div class="section-title">Total Keuntungan</div>
                     <div class="report-row"><div class="report-label">Total Penjualan</div><div class="report-value" id="profit-sales">Rp 0</div></div>
                     <div class="report-row"><div class="report-label">Harga Modal</div><div class="report-value" id="cost-price">Rp 0</div></div>
                     <div class="report-row"><div class="report-label">Total Keuntungan</div><div class="report-value" id="profit-value">Rp 0</div></div>
@@ -1209,10 +1219,12 @@ function exportReportToPdf() {
     if (filterVal === 'offline') filterText = 'Offline (Cash)';
     if (filterVal === 'online') filterText = 'Online (QR & TF)';
     
+    const outletText = (CURRENT_EMPLOYEE && CURRENT_EMPLOYEE.outlet) ? `<h4 style="margin: 5px 0; color: #10b981; font-size: 1.1rem; font-weight: 700;">Cabang: ${CURRENT_EMPLOYEE.outlet.name}</h4>` : '';
     printDiv.innerHTML = `
         <div style="text-align: center; margin-bottom: 25px;">
             <h2 style="margin: 0; font-size: 1.8rem;">LAPORAN TRANSAKSI PENJUALAN</h2>
             <h3 style="margin: 5px 0; color: #475569;">Lapak Yunita POS</h3>
+            ${outletText}
             <p style="margin: 5px 0; font-size: 0.95rem;">Periode: ${startVal || '-'} s/d ${endVal || '-'}</p>
             <p style="margin: 5px 0; font-size: 0.95rem;">Filter Pembayaran: ${filterText}</p>
             <hr style="border: 1px dashed #cbd5e1; margin-top: 15px;"/>
@@ -1303,6 +1315,25 @@ function closeModal(event){
     document.getElementById('change-pin-modal').classList.add('hidden');
 }
 
+let alertCallback = null;
+function showAlert(message, title = 'Pemberitahuan', icon = '🔔', callback = null) {
+    document.getElementById('alert-modal-title').innerText = title;
+    document.getElementById('alert-modal-message').innerText = message;
+    document.getElementById('alert-modal-icon').innerText = icon;
+    alertCallback = callback;
+    document.getElementById('alert-modal').classList.remove('hidden');
+}
+
+function closeAlertModal(event) {
+    if (event) event.stopPropagation();
+    document.getElementById('alert-modal').classList.add('hidden');
+    if (alertCallback) {
+        const cb = alertCallback;
+        alertCallback = null;
+        cb();
+    }
+}
+
 function bindEmployeeForm(){
     const form = document.getElementById('employee-form');
     form.addEventListener('submit', async e => {
@@ -1334,7 +1365,7 @@ function bindEmployeeForm(){
             editingEmployee = null;
             renderEmployees();
         } else {
-            alert('Gagal menyimpan pegawai. Periksa input Anda.');
+            showAlert('Gagal menyimpan pegawai. Periksa input Anda.', 'Gagal Menyimpan', '❌');
         }
     });
 }
@@ -1364,7 +1395,7 @@ function bindOutletForm(){
             renderOutlets();
             loadOutlets();
         } else {
-            alert('Gagal menyimpan outlet. Periksa input Anda.');
+            showAlert('Gagal menyimpan outlet. Periksa input Anda.', 'Gagal Menyimpan', '❌');
         }
     });
 }
@@ -1442,7 +1473,7 @@ function bindProductForm(){
             renderProductsAdmin();
             loadProducts();
         } else {
-            alert('Gagal menyimpan produk. Periksa kembali data Anda.');
+            showAlert('Gagal menyimpan produk. Periksa kembali data Anda.', 'Gagal Menyimpan', '❌');
         }
     });
 }
@@ -1452,7 +1483,29 @@ function showInvoice(tx){
     document.getElementById('invoice-trx-id').innerText = tx.trx_id || ('TRX-' + tx.id);
     document.getElementById('invoice-date').innerText = tx.created_at ? new Date(tx.created_at).toLocaleString('id-ID') : new Date().toLocaleString('id-ID');
     document.getElementById('invoice-cashier').innerText = tx.cashier || 'Kasir';
-    document.getElementById('invoice-outlet-name').innerText = tx.outlet || 'Lapak Yunita';
+    
+    const outletName = tx.outlet || 'Lapak Yunita';
+    document.getElementById('invoice-outlet-name').innerText = outletName;
+    
+    const outletInfo = OUTLETS.find(o => o.name === outletName);
+    const addressEl = document.getElementById('invoice-outlet-address');
+    if (addressEl) {
+        if (outletInfo) {
+            let addr = outletInfo.address || '';
+            if (outletInfo.kelurahan) addr += ', ' + outletInfo.kelurahan;
+            if (outletInfo.kode_pos) addr += ' ' + outletInfo.kode_pos;
+            if (outletInfo.phone) addr += ` (Telp: ${outletInfo.phone})`;
+            addressEl.innerText = addr;
+            addressEl.style.display = 'block';
+        } else {
+            addressEl.innerText = outletName === 'Outlet Pusat' ? 'Outlet Pusat' : '';
+            if (outletName === 'Outlet Pusat') {
+                addressEl.style.display = 'block';
+            } else {
+                addressEl.style.display = 'none';
+            }
+        }
+    }
     
     // Render items
     const itemsContainer = document.getElementById('invoice-items');
@@ -1599,12 +1652,13 @@ function bindPaymentForm(){
         });
         if(response.ok){
             const txData = await response.json();
-            alert('Transaksi berhasil!');
-            CART = [];
-            renderTransaction();
-            showInvoice(txData);
+            showAlert('Transaksi berhasil!', 'Berhasil', '✅', () => {
+                CART = [];
+                renderTransaction();
+                showInvoice(txData);
+            });
         } else {
-            alert('Gagal menyimpan transaksi. Coba lagi.');
+            showAlert('Gagal menyimpan transaksi. Coba lagi.', 'Error', '❌');
         }
     });
 }
@@ -1662,8 +1716,8 @@ function bindChangePinForm() {
         const oldPin = document.getElementById('change-pin-old').value;
         const newPin = document.getElementById('change-pin-new').value;
         
-        if (!employeeId) return alert('Silakan pilih nama pegawai.');
-        if (oldPin.length !== 4 || newPin.length !== 4) return alert('PIN harus terdiri dari 4 digit angka.');
+        if (!employeeId) return showAlert('Silakan pilih nama pegawai.', 'Peringatan', '⚠️');
+        if (oldPin.length !== 4 || newPin.length !== 4) return showAlert('PIN harus terdiri dari 4 digit angka.', 'Peringatan', '⚠️');
         
         const res = await fetch('/pos/api/change-pin', {
             method: 'POST',
@@ -1675,9 +1729,10 @@ function bindChangePinForm() {
         });
         
         if (res.ok) {
-            alert('PIN berhasil diperbarui!');
-            closeModal();
-            initLoginScreen();
+            showAlert('PIN berhasil diperbarui!', 'Berhasil', '✅', () => {
+                closeModal();
+                initLoginScreen();
+            });
         } else {
             const err = await res.json();
             const errDiv = document.getElementById('change-pin-error');
@@ -1690,8 +1745,8 @@ function bindChangePinForm() {
 async function handleLogin(e) {
     if (e) e.preventDefault();
     const employeeId = document.getElementById('login-employee-select').value;
-    if (!employeeId) return alert('Silakan pilih pegawai terlebih dahulu.');
-    if (pinBuffer.length !== 4) return alert('Masukkan 4 digit PIN Anda.');
+    if (!employeeId) return showAlert('Silakan pilih pegawai terlebih dahulu.', 'Peringatan', '⚠️');
+    if (pinBuffer.length !== 4) return showAlert('Masukkan 4 digit PIN Anda.', 'Peringatan', '⚠️');
     
     const res = await fetch('/pos/api/login', {
         method: 'POST',
@@ -1770,6 +1825,7 @@ function applyEmployeeRBAC() {
     const nameEl = document.getElementById('current-user-name');
     const roleEl = document.getElementById('current-user-role');
     const avatarEl = document.getElementById('current-user-avatar');
+    const outletEl = document.getElementById('current-user-outlet');
     
     nameEl.innerText = CURRENT_EMPLOYEE.name;
     roleEl.innerText = CURRENT_EMPLOYEE.role;
@@ -1778,6 +1834,16 @@ function applyEmployeeRBAC() {
     avatarEl.innerText = initials;
     
     const access = (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase();
+    
+    if (outletEl) {
+        if ((access === 'kasir' || access === 'supervisor') && CURRENT_EMPLOYEE.outlet) {
+            outletEl.innerText = CURRENT_EMPLOYEE.outlet.name;
+            outletEl.classList.remove('hidden');
+        } else {
+            outletEl.innerText = '';
+            outletEl.classList.add('hidden');
+        }
+    }
     
     const menuProduk = document.getElementById('menu-produk');
     const menuPegawai = document.getElementById('menu-pegawai');
