@@ -600,8 +600,20 @@ function setPageHeader(title, subtitle, actionLabel = '+ Tambah Produk', showAct
 }
 
 async function loadProducts(){
-    const res = await fetch('/pos/api/products');
-    PRODUCTS = await res.json();
+    try {
+        const res = await fetch('/pos/api/products');
+        if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                PRODUCTS = data;
+                return data;
+            }
+        }
+    } catch (e) {
+        console.error("Error loading products:", e);
+    }
+    PRODUCTS = [];
+    return [];
 }
 
 function showPage(page){
@@ -829,11 +841,21 @@ function renderOutlets(){
     });
 }
 
-function loadOutlets(){
-    return fetch('/pos/api/outlets').then(r => r.json()).then(data => {
-        OUTLETS = data;
-        return data;
-    });
+async function loadOutlets(){
+    try {
+        const res = await fetch('/pos/api/outlets');
+        if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                OUTLETS = data;
+                return data;
+            }
+        }
+    } catch (e) {
+        console.error("Error loading outlets:", e);
+    }
+    OUTLETS = [];
+    return [];
 }
 
 function openAddEmployee(){
@@ -1487,7 +1509,7 @@ function showInvoice(tx){
     const outletName = tx.outlet || 'Lapak Yunita';
     document.getElementById('invoice-outlet-name').innerText = outletName;
     
-    const outletInfo = OUTLETS.find(o => o.name === outletName);
+    const outletInfo = Array.isArray(OUTLETS) ? OUTLETS.find(o => o.name === outletName) : null;
     const addressEl = document.getElementById('invoice-outlet-address');
     if (addressEl) {
         if (outletInfo) {
@@ -1765,6 +1787,7 @@ async function handleLogin(e) {
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('pos-app-shell').classList.remove('hidden');
         applyEmployeeRBAC();
+        await loadOutlets();
         showPage('transaksi');
     } else {
         const err = await res.json();
@@ -1797,6 +1820,7 @@ async function checkSession() {
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('pos-app-shell').classList.remove('hidden');
         applyEmployeeRBAC();
+        await loadOutlets();
         showPage('transaksi');
     } else {
         document.getElementById('pos-app-shell').classList.add('hidden');
