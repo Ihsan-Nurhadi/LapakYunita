@@ -1023,16 +1023,34 @@ function renderReports(){
                         <input type="date" id="report-end-date" style="border:1px solid rgba(15,23,42,.12);border-radius:12px;padding:8px 12px;font-size:0.95rem;outline:none;background:#f8fafc;margin-top:4px;" />
                     </div>
                 </div>
-                <div>
+                <div style="position: relative; width: 250px;">
                     <div class="label">Tipe Transaksi dan Pembayaran</div>
-                    <select id="report-payment-filter" style="border:1px solid rgba(15,23,42,.12);border-radius:12px;padding:8px 12px;font-size:0.95rem;outline:none;background:#f8fafc;margin-top:4px; width:220px;">
-                        <option value="all">Semua (Offline & Online)</option>
-                        <option value="offline_cash">Offline Cash</option>
-                        <option value="offline_qr">Offline QR</option>
-                        <option value="online_qr">Online QR</option>
-                        <option value="online_tf">Online TF</option>
-                        <option value="offline_tf">Offline TF</option>
-                    </select>
+                    <div id="payment-dropdown-btn" style="display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(15,23,42,.12); border-radius: 12px; padding: 8px 12px; font-size: 0.95rem; outline: none; background: #f8fafc; margin-top: 4px; cursor: pointer; user-select: none; color: #334155; font-weight: 500;">
+                        <span id="payment-dropdown-label">Semua (Offline & Online)</span>
+                        <svg id="payment-dropdown-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.2s;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
+                    <div id="payment-dropdown-content" class="hidden" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 10; margin-top: 4px; background: #ffffff; border: 1px solid rgba(15,23,42,.12); border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); padding: 8px; display: flex; flex-direction: column; gap: 4px; max-height: 240px; overflow-y: auto;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem; cursor: pointer; font-weight: 500; color: #334155; padding: 6px 8px; border-radius: 6px; transition: background 0.15s;">
+                            <input type="checkbox" id="filter-offline-cash" class="payment-checkbox" style="width: 16px; height: 16px; accent-color: #10b981; cursor: pointer;" checked />
+                            Offline Cash
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem; cursor: pointer; font-weight: 500; color: #334155; padding: 6px 8px; border-radius: 6px; transition: background 0.15s;">
+                            <input type="checkbox" id="filter-offline-qr" class="payment-checkbox" style="width: 16px; height: 16px; accent-color: #10b981; cursor: pointer;" checked />
+                            Offline QR
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem; cursor: pointer; font-weight: 500; color: #334155; padding: 6px 8px; border-radius: 6px; transition: background 0.15s;">
+                            <input type="checkbox" id="filter-online-qr" class="payment-checkbox" style="width: 16px; height: 16px; accent-color: #10b981; cursor: pointer;" checked />
+                            Online QR
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem; cursor: pointer; font-weight: 500; color: #334155; padding: 6px 8px; border-radius: 6px; transition: background 0.15s;">
+                            <input type="checkbox" id="filter-online-tf" class="payment-checkbox" style="width: 16px; height: 16px; accent-color: #10b981; cursor: pointer;" checked />
+                            Online TF
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem; cursor: pointer; font-weight: 500; color: #334155; padding: 6px 8px; border-radius: 6px; transition: background 0.15s;">
+                            <input type="checkbox" id="filter-offline-tf" class="payment-checkbox" style="width: 16px; height: 16px; accent-color: #10b981; cursor: pointer;" checked />
+                            Offline TF
+                        </label>
+                    </div>
                 </div>
                 <div id="report-outlet-filter-container" class="hidden">
                     <div class="label">Cabang / Outlet</div>
@@ -1112,13 +1130,45 @@ function renderReports(){
             outletFilterContainer.classList.add('hidden');
         }
 
-        document.getElementById('report-payment-filter').addEventListener('change', updateReportData);
+        document.querySelectorAll('.payment-checkbox').forEach(cb => {
+            cb.addEventListener('change', updateReportData);
+        });
         document.getElementById('report-start-date').addEventListener('change', updateReportData);
         document.getElementById('report-end-date').addEventListener('change', updateReportData);
         
         if (outletFilter) {
             outletFilter.addEventListener('change', updateReportData);
         }
+
+        const dropdownBtn = document.getElementById('payment-dropdown-btn');
+        const dropdownContent = document.getElementById('payment-dropdown-content');
+        const dropdownArrow = document.getElementById('payment-dropdown-arrow');
+        
+        if (dropdownBtn && dropdownContent) {
+            dropdownBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdownContent.classList.toggle('hidden');
+                if (dropdownArrow) {
+                    if (dropdownContent.classList.contains('hidden')) {
+                        dropdownArrow.style.transform = 'rotate(0deg)';
+                    } else {
+                        dropdownArrow.style.transform = 'rotate(180deg)';
+                    }
+                }
+            });
+            
+            dropdownContent.querySelectorAll('label').forEach(lbl => {
+                lbl.addEventListener('mouseenter', () => lbl.style.background = '#f1f5f9');
+                lbl.addEventListener('mouseleave', () => lbl.style.background = 'transparent');
+            });
+        }
+        
+        document.addEventListener('click', (e) => {
+            if (dropdownContent && !dropdownContent.classList.contains('hidden') && !e.target.closest('#payment-dropdown-btn') && !e.target.closest('#payment-dropdown-content')) {
+                dropdownContent.classList.add('hidden');
+                if (dropdownArrow) dropdownArrow.style.transform = 'rotate(0deg)';
+            }
+        });
         
         updateReportData();
     });
@@ -1126,7 +1176,26 @@ function renderReports(){
 
 function updateReportData() {
     const allTransactions = window.ALL_TRANSACTIONS || [];
-    const filterVal = document.getElementById('report-payment-filter').value;
+    
+    const activeFilters = [];
+    const activeLabels = [];
+    if (document.getElementById('filter-offline-cash')?.checked) { activeFilters.push('offline_cash'); activeLabels.push('Offline Cash'); }
+    if (document.getElementById('filter-offline-qr')?.checked) { activeFilters.push('offline_qr'); activeLabels.push('Offline QR'); }
+    if (document.getElementById('filter-online-qr')?.checked) { activeFilters.push('online_qr'); activeLabels.push('Online QR'); }
+    if (document.getElementById('filter-online-tf')?.checked) { activeFilters.push('online_tf'); activeLabels.push('Online TF'); }
+    if (document.getElementById('filter-offline-tf')?.checked) { activeFilters.push('offline_tf'); activeLabels.push('Offline TF'); }
+
+    const labelEl = document.getElementById('payment-dropdown-label');
+    if (labelEl) {
+        if (activeLabels.length === 5) {
+            labelEl.innerText = 'Semua (Offline & Online)';
+        } else if (activeLabels.length === 0) {
+            labelEl.innerText = 'Tidak ada';
+        } else {
+            labelEl.innerText = activeLabels.join(', ');
+        }
+    }
+
     const startVal = document.getElementById('report-start-date').value;
     const endVal = document.getElementById('report-end-date').value;
     
@@ -1140,17 +1209,15 @@ function updateReportData() {
     }
     
     // Filter by payment method
-    if (filterVal !== 'all') {
-        filteredTransactions = filteredTransactions.filter(tx => {
-            const m = tx.payment_method || 'offline_cash';
-            if (filterVal === 'offline_cash') return m === 'offline_cash' || m === 'cash';
-            if (filterVal === 'offline_qr') return m === 'offline_qr' || m === 'qr';
-            if (filterVal === 'online_qr') return m === 'online_qr';
-            if (filterVal === 'online_tf') return m === 'online_tf';
-            if (filterVal === 'offline_tf') return m === 'offline_tf' || m === 'tf';
-            return false;
-        });
-    }
+    filteredTransactions = filteredTransactions.filter(tx => {
+        const m = tx.payment_method || 'offline_cash';
+        if (activeFilters.includes('offline_cash') && (m === 'offline_cash' || m === 'cash')) return true;
+        if (activeFilters.includes('offline_qr') && (m === 'offline_qr' || m === 'qr')) return true;
+        if (activeFilters.includes('online_qr') && m === 'online_qr') return true;
+        if (activeFilters.includes('online_tf') && m === 'online_tf') return true;
+        if (activeFilters.includes('offline_tf') && (m === 'offline_tf' || m === 'tf')) return true;
+        return false;
+    });
     
     // Filter by start date
     if (startVal) {
@@ -1291,7 +1358,16 @@ function changeHistoryPage(delta) {
 function exportReportToPdf() {
     const startVal = document.getElementById('report-start-date').value;
     const endVal = document.getElementById('report-end-date').value;
-    const filterVal = document.getElementById('report-payment-filter').value;
+    
+    const activeFilters = [];
+    const activeLabels = [];
+    if (document.getElementById('filter-offline-cash')?.checked) { activeFilters.push('offline_cash'); activeLabels.push('Offline Cash'); }
+    if (document.getElementById('filter-offline-qr')?.checked) { activeFilters.push('offline_qr'); activeLabels.push('Offline QR'); }
+    if (document.getElementById('filter-online-qr')?.checked) { activeFilters.push('online_qr'); activeLabels.push('Online QR'); }
+    if (document.getElementById('filter-online-tf')?.checked) { activeFilters.push('online_tf'); activeLabels.push('Online TF'); }
+    if (document.getElementById('filter-offline-tf')?.checked) { activeFilters.push('offline_tf'); activeLabels.push('Offline TF'); }
+
+    let filterText = activeLabels.length === 5 ? 'Semua (Offline & Online)' : (activeLabels.length === 0 ? 'Tidak Ada' : activeLabels.join(', '));
     
     const outletFilterEl = document.getElementById('report-outlet-filter');
     const selectedOutletName = outletFilterEl ? outletFilterEl.value : 'all';
@@ -1320,13 +1396,6 @@ function exportReportToPdf() {
     printDiv.style.background = '#fff';
     printDiv.style.color = '#000';
     printDiv.style.fontFamily = 'Arial, sans-serif';
-    
-    let filterText = 'Semua (Offline & Online)';
-    if (filterVal === 'offline_cash') filterText = 'Offline Cash';
-    if (filterVal === 'offline_qr') filterText = 'Offline QR';
-    if (filterVal === 'online_qr') filterText = 'Online QR';
-    if (filterVal === 'online_tf') filterText = 'Online TF';
-    if (filterVal === 'offline_tf') filterText = 'Offline TF';
     
     let outletText = '';
     if (selectedOutletName !== 'all') {
