@@ -11,6 +11,13 @@ class Outlet extends Model
 
     protected $fillable = ['name','phone','address','kelurahan','kode_pos','image'];
 
+    public function products()
+    {
+        return $this->belongsToMany(Product::class, 'product_outlet')
+                    ->withPivot('stock')
+                    ->withTimestamps();
+    }
+
     public function employees()
     {
         return $this->hasMany(Employee::class);

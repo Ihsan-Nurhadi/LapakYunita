@@ -278,15 +278,10 @@
             <input type="number" name="price" id="field-price" required />
             <label>Harga Modal</label>
             <input type="number" name="modal" id="field-modal" />
-            <label>Stok Saat Ini</label>
-            <input type="number" id="field-current-stock" disabled style="background: #cbd5e1; cursor: not-allowed;" value="0" />
-            
-            <label>Tambah Stok</label>
-            <input type="number" id="field-add-stock" placeholder="Masukkan jumlah stok tambahan" value="0" />
-
-            <label>Outlet</label>
-            <select id="field-outlet" style="width:100%; border:1px solid rgba(15, 23, 42, .14); border-radius:14px; padding:12px 14px; margin-top:6px; font-size:1rem; color:#0f172a; background:#f8fafc; outline:none;">
-            </select>
+            <label>Stok per Cabang / Outlet</label>
+            <div id="outlet-stocks-container" style="display:flex; flex-direction:column; gap:12px; margin-top:8px; background:#f8fafc; border:1px solid rgba(15,23,42,.08); border-radius:16px; padding:16px; max-height:220px; overflow-y:auto;">
+                <!-- Dinamis diisi lewat JavaScript -->
+            </div>
 
             <label>Gambar Produk</label>
             <input type="file" name="image" id="field-image" accept="image/*" />
@@ -375,6 +370,14 @@
                 <option value="tf">Transfer Bank (TF)</option>
             </select>
 
+            <div id="payment-type-container" class="hidden" style="margin-bottom: 16px;">
+                <label for="payment-type-select" style="display: block; font-size: .9rem; font-weight: 600; color: #475569; margin-bottom: 8px;">Tipe Pembayaran</label>
+                <select id="payment-type-select" style="width: 100%; border: 1px solid rgba(15, 23, 42, .14); border-radius: 14px; padding: 12px 14px; font-size: 1rem; color: #0f172a; background: #f8fafc; outline: none;">
+                    <option value="offline">Offline</option>
+                    <option value="online">Online</option>
+                </select>
+            </div>
+
             <div id="qr-payment-details" class="hidden" style="margin-top: -8px; margin-bottom: 16px; text-align: center; background: #f0fdf4; padding: 16px; border-radius: 16px; border: 1px solid rgba(22,163,74,.15);">
                 <p style="margin: 0 0 10px; color: #166534; font-weight: bold; font-size: 0.95rem;">Scan QRIS LapakYunita:</p>
                 <img src="/qris_payment.png" alt="QRIS Payment" style="width: 200px; height: 200px; object-fit: cover; border-radius: 12px; border: 2px solid #16a34a; box-shadow: 0 10px 25px rgba(22,163,74,0.15);" />
@@ -406,10 +409,6 @@
 
             <label for="payment-paid-input" style="display: block; font-size: .9rem; font-weight: 600; color: #475569; margin-bottom: 8px;">Uang Tunai (Bayar)</label>
             <input type="number" id="payment-paid-input" required placeholder="Masukkan jumlah uang" style="width: 100%; border: 1px solid rgba(15, 23, 42, .14); border-radius: 14px; padding: 14px 16px; font-size: 1.3rem; font-weight: 700; color: #0f172a; background: #f8fafc; outline: none; transition: all 0.2s ease;" />
-            
-            <div id="quick-cash-container" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px;">
-                <!-- Quick cash buttons -->
-            </div>
 
             <div style="background: #f0fdf4; border-radius: 16px; padding: 16px; margin-top: 20px; border: 1px solid rgba(22,163,74,.15); display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: #166534; font-weight: 600;">Kembalian:</span>
@@ -448,16 +447,32 @@
 
 <template id="tpl-produk">
     <div>
+        <div class="search-box" style="margin-bottom: 18px;">
+            <span>🔍</span>
+            <input id="search-produk" placeholder="Cari nama produk atau kategori..." />
+        </div>
         <div id="products-admin" class="card-grid"></div>
     </div>
 </template>
 
 <template id="tpl-pegawai">
-    <div id="employees-admin" class="card-grid"></div>
+    <div>
+        <div class="search-box" style="margin-bottom: 18px;">
+            <span>🔍</span>
+            <input id="search-pegawai" placeholder="Cari nama pegawai, role, email, atau outlet..." />
+        </div>
+        <div id="employees-admin" class="card-grid"></div>
+    </div>
 </template>
 
 <template id="tpl-outlet">
-    <div id="outlets-admin" class="card-grid"></div>
+    <div>
+        <div class="search-box" style="margin-bottom: 18px;">
+            <span>🔍</span>
+            <input id="search-outlet" placeholder="Cari nama outlet, alamat, atau kelurahan..." />
+        </div>
+        <div id="outlets-admin" class="card-grid"></div>
+    </div>
 </template>
 
 <div id="employee-modal" class="modal-backdrop hidden" onclick="closeModal(event)">
@@ -737,12 +752,11 @@ function processPayment(){
     
     const methodSelect = document.getElementById('payment-method-select');
     methodSelect.value = 'cash';
-    document.getElementById('quick-cash-container').style.display = 'grid';
     
     document.getElementById('qr-payment-details').classList.add('hidden');
     document.getElementById('tf-payment-details').classList.add('hidden');
+    document.getElementById('payment-type-container').classList.add('hidden');
     
-    generateQuickCash(total);
     updatePaymentChange();
     
     document.getElementById('payment-modal').classList.remove('hidden');
@@ -754,30 +768,55 @@ function renderProductsAdmin(){
     fetch('/pos/api/products').then(r=>r.json()).then(data => {
         PRODUCTS = data;
         const container = document.getElementById('products-admin');
-        container.innerHTML = data.length ? data.map(p => `
-            <article class="product-card">
-                <div class="top">
-                    <div class="icon">${renderImageCircle(p.image, p.name) || categoryIcon(p.category)}</div>
-                    <div class="meta" style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
-                        <span class="tag">${p.category || 'Umum'}</span>
-                        <span class="tag" style="background:#f0fdf4; color:#166534;">${p.outlet?.name || 'Semua Outlet'}</span>
-                    </div>
-                </div>
-                <div>
-                    <h3>${p.name}</h3>
-                    <p style="color:#64748b; margin:8px 0 0;">Harga Jual ${formatRupiah(p.price)}</p>
-                </div>
-                <div class="stats">
-                    <div class="stat"><span>Harga Modal</span><strong>${formatRupiah(p.modal || 0)}</strong></div>
-                    <div class="stat"><span>Stok</span><strong>${p.stock ?? 0}</strong></div>
-                    <div class="stat"><span>ID</span><strong>${p.id}</strong></div>
-                </div>
-                <div class="actions">
-                    <button type="button" class="btn-edit" onclick="openEditProduct(${p.id})">Edit</button>
-                    <button type="button" class="btn-delete" onclick="deleteProduct(${p.id})">Hapus</button>
-                </div>
-            </article>
-        `).join('') : '<div class="empty-state">Belum ada produk. Tambahkan produk baru untuk menampilkan daftar.</div>';
+        const renderList = list => {
+            container.innerHTML = list.length ? list.map(p => {
+                let outletsHtml = '';
+                if (Array.isArray(p.stocks) && p.stocks.length > 0) {
+                    outletsHtml = p.stocks.map(s => 
+                        `<span class="tag" style="background:#f0fdf4; color:#166534; font-size: 0.8rem; padding: 2px 6px; display:inline-block; margin-top:2px;">${s.outlet_name}: ${s.stock}</span>`
+                    ).join(' ');
+                } else {
+                    outletsHtml = `<span class="tag" style="background:#f1f5f9; color:#64748b; font-size: 0.8rem; padding: 2px 6px; display:inline-block; margin-top:2px;">Belum ada cabang</span>`;
+                }
+
+                return `
+                    <article class="product-card" style="display:flex; flex-direction:column; min-height: 310px;">
+                        <div class="top">
+                            <div class="icon">${renderImageCircle(p.image, p.name) || categoryIcon(p.category)}</div>
+                            <div class="meta" style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
+                                <span class="tag">${p.category || 'Umum'}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <h3>${p.name}</h3>
+                            <p style="color:#64748b; margin:8px 0 0;">Harga Jual ${formatRupiah(p.price)}</p>
+                        </div>
+                        <div class="stats" style="grid-template-columns: repeat(2, 1fr); margin-top:8px;">
+                            <div class="stat"><span>Harga Modal</span><strong>${formatRupiah(p.modal || 0)}</strong></div>
+                            <div class="stat"><span>Total Stok</span><strong>${p.stock ?? 0}</strong></div>
+                        </div>
+                        <div style="margin-top: 8px; font-size: 0.85rem; color: #475569; display: flex; flex-wrap: wrap; gap: 6px; border-top: 1px dashed rgba(0,0,0,0.05); padding-top: 8px;">
+                            <strong>Cabang & Stok:</strong> ${outletsHtml}
+                        </div>
+                        <div class="actions" style="margin-top:auto; padding-top:12px;">
+                            <button type="button" class="btn-edit" onclick="openEditProduct(${p.id})">Edit</button>
+                            <button type="button" class="btn-delete" onclick="deleteProduct(${p.id})">Hapus</button>
+                        </div>
+                    </article>
+                `;
+            }).join('') : '<div class="empty-state">Belum ada produk. Tambahkan produk baru untuk menampilkan daftar.</div>';
+        };
+        renderList(PRODUCTS);
+
+        document.getElementById('search-produk').addEventListener('input', e => {
+            const q = e.target.value.toLowerCase();
+            const filtered = PRODUCTS.filter(p => 
+                p.name.toLowerCase().includes(q) || 
+                (p.category || '').toLowerCase().includes(q) ||
+                (Array.isArray(p.stocks) && p.stocks.some(s => s.outlet_name.toLowerCase().includes(q)))
+            );
+            renderList(filtered);
+        });
     });
 }
 
@@ -786,22 +825,36 @@ function renderEmployees(){
     Promise.all([fetch('/pos/api/employees').then(r => r.json()), loadOutlets()]).then(([data]) => {
         EMPLOYEES = data;
         const container = document.getElementById('employees-admin');
-        container.innerHTML = data.length ? data.map(emp => `
-            <article class="product-card user-card">
-                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-                    <div>${renderImageCircle(emp.photo, emp.name, 48) || '<div style="width:48px;height:48px;border-radius:18px;background:#eef2ff;display:grid;place-items:center;color:#4338ca;">👤</div>'}</div>
-                    <div>
-                        <h3>${emp.name}</h3>
-                        <div class="meta">${emp.role || 'Staff'} • ${emp.email || '-'} • ${emp.phone || '-'}</div>
+        const renderList = list => {
+            container.innerHTML = list.length ? list.map(emp => `
+                <article class="product-card user-card" style="display:flex; flex-direction:column; min-height:240px;">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                        <div>${renderImageCircle(emp.photo, emp.name, 48) || '<div style="width:48px;height:48px;border-radius:18px;background:#eef2ff;display:grid;place-items:center;color:#4338ca;">👤</div>'}</div>
+                        <div>
+                            <h3>${emp.name}</h3>
+                            <div class="meta">${emp.role || 'Staff'} • ${emp.email || '-'} • ${emp.phone || '-'}</div>
+                        </div>
                     </div>
-                </div>
-                <div class="meta">Outlet: ${emp.outlet?.name || emp.outlet_id || 'Tidak tersedia'}</div>
-                <div class="actions">
-                    <button type="button" class="btn-edit" onclick="openEditEmployee(${emp.id})">Edit</button>
-                    <button type="button" class="btn-delete" onclick="deleteEmployee(${emp.id})">Hapus</button>
-                </div>
-            </article>
-        `).join('') : '<div class="empty-state">Belum ada data pegawai.</div>';
+                    <div class="meta">Outlet: ${emp.outlet?.name || emp.outlet_id || 'Tidak tersedia'}</div>
+                    <div class="actions" style="margin-top:auto; padding-top:12px;">
+                        <button type="button" class="btn-edit" onclick="openEditEmployee(${emp.id})">Edit</button>
+                        <button type="button" class="btn-delete" onclick="deleteEmployee(${emp.id})">Hapus</button>
+                    </div>
+                </article>
+            `).join('') : '<div class="empty-state">Belum ada data pegawai.</div>';
+        };
+        renderList(EMPLOYEES);
+
+        document.getElementById('search-pegawai').addEventListener('input', e => {
+            const q = e.target.value.toLowerCase();
+            const filtered = EMPLOYEES.filter(emp => 
+                emp.name.toLowerCase().includes(q) || 
+                (emp.role || '').toLowerCase().includes(q) || 
+                (emp.email || '').toLowerCase().includes(q) ||
+                (emp.outlet?.name || '').toLowerCase().includes(q)
+            );
+            renderList(filtered);
+        });
     });
 }
 
@@ -810,34 +863,47 @@ function renderOutlets(){
     fetch('/pos/api/outlets').then(r => r.json()).then(data => {
         OUTLETS = data;
         const container = document.getElementById('outlets-admin');
-        container.innerHTML = data.length ? data.map(out => {
-            const supervisors = (out.employees || []).filter(e => e.role?.toLowerCase() === 'supervisor').map(e => e.name);
-            const kasirs = (out.employees || []).filter(e => e.role?.toLowerCase() === 'kasir').map(e => e.name);
-            const supervisorText = supervisors.length ? supervisors.join(', ') : '-';
-            const kasirText = kasirs.length ? kasirs.join(', ') : '-';
-            
-            return `
-                <article class="product-card user-card">
-                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-                        <div>${renderImageCircle(out.image, out.name, 48) || '<div style="width:48px;height:48px;border-radius:18px;background:#f0f9ff;display:grid;place-items:center;color:#0284c7;">🏬</div>'}</div>
-                        <div>
-                            <h3>${out.name}</h3>
-                            <div class="meta">${out.address || '-'}${out.kelurahan ? ', ' + out.kelurahan : ''}</div>
+        const renderList = list => {
+            container.innerHTML = list.length ? list.map(out => {
+                const supervisors = (out.employees || []).filter(e => e.role?.toLowerCase() === 'supervisor').map(e => e.name);
+                const kasirs = (out.employees || []).filter(e => e.role?.toLowerCase() === 'kasir').map(e => e.name);
+                const supervisorText = supervisors.length ? supervisors.join(', ') : '-';
+                const kasirText = kasirs.length ? kasirs.join(', ') : '-';
+
+                return `
+                    <article class="product-card user-card" style="display:flex; flex-direction:column; min-height:280px;">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                            <div>${renderImageCircle(out.image, out.name, 48) || '<div style="width:48px;height:48px;border-radius:18px;background:#f0f9ff;display:grid;place-items:center;color:#0284c7;">🏬</div>'}</div>
+                            <div>
+                                <h3>${out.name}</h3>
+                                <div class="meta">${out.address || '-'}${out.kelurahan ? ', ' + out.kelurahan : ''}</div>
+                            </div>
                         </div>
-                    </div>
-                    <div class="meta">Telp: ${out.phone || '-'}</div>
-                    <div class="meta">Kode Pos: ${out.kode_pos || '-'}</div>
-                    <div class="meta" style="margin-top: 8px; border-top: 1px dashed rgba(0,0,0,0.05); padding-top: 8px; font-size: 0.9rem;">
-                        <strong>Supervisor:</strong> ${supervisorText}<br/>
-                        <strong>Kasir:</strong> ${kasirText}
-                    </div>
-                    <div class="actions">
-                        <button type="button" class="btn-edit" onclick="openEditOutlet(${out.id})">Edit</button>
-                        <button type="button" class="btn-delete" onclick="deleteOutlet(${out.id})">Hapus</button>
-                    </div>
-                </article>
-            `;
-        }).join('') : '<div class="empty-state">Belum ada data outlet.</div>';
+                        <div class="meta">Telp: ${out.phone || '-'}</div>
+                        <div class="meta">Kode Pos: ${out.kode_pos || '-'}</div>
+                        <div class="meta" style="margin-top: 8px; border-top: 1px dashed rgba(0,0,0,0.05); padding-top: 8px; font-size: 0.9rem;">
+                            <strong>Supervisor:</strong> ${supervisorText}<br/>
+                            <strong>Kasir:</strong> ${kasirText}
+                        </div>
+                        <div class="actions" style="margin-top:auto; padding-top:12px;">
+                            <button type="button" class="btn-edit" onclick="openEditOutlet(${out.id})">Edit</button>
+                            <button type="button" class="btn-delete" onclick="deleteOutlet(${out.id})">Hapus</button>
+                        </div>
+                    </article>
+                `;
+            }).join('') : '<div class="empty-state">Belum ada data outlet.</div>';
+        };
+        renderList(OUTLETS);
+
+        document.getElementById('search-outlet').addEventListener('input', e => {
+            const q = e.target.value.toLowerCase();
+            const filtered = OUTLETS.filter(out => 
+                out.name.toLowerCase().includes(q) || 
+                (out.address || '').toLowerCase().includes(q) ||
+                (out.kelurahan || '').toLowerCase().includes(q)
+            );
+            renderList(filtered);
+        });
     });
 }
 
@@ -946,24 +1012,53 @@ const historyPerPage = 10;
 function renderReports(){
     document.getElementById('page-content').innerHTML = `
         <div style="display:grid;gap:24px;">
+            <div class="info-card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;width:100%;">
+                <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                    <div>
+                        <div class="label">Dari Tanggal</div>
+                        <input type="date" id="report-start-date" style="border:1px solid rgba(15,23,42,.12);border-radius:12px;padding:8px 12px;font-size:0.95rem;outline:none;background:#f8fafc;margin-top:4px;" />
+                    </div>
+                    <div>
+                        <div class="label">Sampai Tanggal</div>
+                        <input type="date" id="report-end-date" style="border:1px solid rgba(15,23,42,.12);border-radius:12px;padding:8px 12px;font-size:0.95rem;outline:none;background:#f8fafc;margin-top:4px;" />
+                    </div>
+                </div>
+                <div>
+                    <div class="label">Tipe Transaksi dan Pembayaran</div>
+                    <select id="report-payment-filter" style="border:1px solid rgba(15,23,42,.12);border-radius:12px;padding:8px 12px;font-size:0.95rem;outline:none;background:#f8fafc;margin-top:4px; width:220px;">
+                        <option value="all">Semua (Offline & Online)</option>
+                        <option value="offline_cash">Offline Cash</option>
+                        <option value="offline_qr">Offline QR</option>
+                        <option value="online_qr">Online QR</option>
+                        <option value="online_tf">Online TF</option>
+                        <option value="offline_tf">Offline TF</option>
+                    </select>
+                </div>
+                <div id="report-outlet-filter-container" class="hidden">
+                    <div class="label">Cabang / Outlet</div>
+                    <select id="report-outlet-filter" style="border:1px solid rgba(15,23,42,.12);border-radius:12px;padding:8px 12px;font-size:0.95rem;outline:none;background:#f8fafc;margin-top:4px; width:220px;">
+                        <option value="all">Semua Cabang</option>
+                    </select>
+                </div>
+                <button type="button" class="export-btn" onclick="exportReportToPdf()">Export ke PDF</button>
+            </div>
+
             <div class="report-summary-grid">
                 <div class="report-summary-card">
                     <div class="label">Total Pendapatan</div>
                     <div class="value" id="gross-sales">Rp 0</div>
                     <div style="font-size:0.9rem; margin-top:8px; display:flex; flex-direction:column; gap:4px; border-top:1px solid rgba(0,0,0,0.05); padding-top:8px;">
-                        <div style="display:flex; justify-content:space-between;"><span>Offline (Cash):</span><strong id="gross-sales-offline" style="color: #64748b;">Rp 0</strong></div>
+                        <div style="display:flex; justify-content:space-between;"><span>Offline (Cash/QR/TF):</span><strong id="gross-sales-offline" style="color: #64748b;">Rp 0</strong></div>
                         <div style="display:flex; justify-content:space-between;"><span>Online (QR & TF):</span><strong id="gross-sales-online" style="color: #64748b;">Rp 0</strong></div>
                     </div>
                 </div>
                 <div class="report-summary-card">
                     <div class="label">Total Transaksi</div>
                     <div class="value" id="transaction-count">0 transaksi</div>
-                    <div class="subtitle">Jumlah transaksi yang tercatat</div>
                 </div>
                 <div class="report-summary-card">
                     <div class="label">Total Item Terjual</div>
                     <div class="value" id="items-sold">0 item</div>
-                    <div class="subtitle">Semua jumlah kuantitas produk</div>
                 </div>
             </div>
             <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:18px;">
@@ -977,34 +1072,13 @@ function renderReports(){
                     <div id="history-pagination" style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; font-size:0.9rem;"></div>
                 </div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+            <div style="display:grid;grid-template-columns:1fr;gap:18px;">
                 <div class="report-card">
                     <div class="section-title">Total Keuntungan</div>
                     <div class="report-row"><div class="report-label">Total Penjualan</div><div class="report-value" id="profit-sales">Rp 0</div></div>
                     <div class="report-row"><div class="report-label">Harga Modal</div><div class="report-value" id="cost-price">Rp 0</div></div>
                     <div class="report-row"><div class="report-label">Total Keuntungan</div><div class="report-value" id="profit-value">Rp 0</div></div>
                     <div class="note-text">*Biaya operasional belum termasuk dalam perhitungan ini.</div>
-                </div>
-                <div class="info-card" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;width:100%;">
-                    <div style="display:flex; gap:16px; flex-wrap:wrap;">
-                        <div>
-                            <div class="label">Dari Tanggal</div>
-                            <input type="date" id="report-start-date" style="border:1px solid rgba(15,23,42,.12);border-radius:12px;padding:8px 12px;font-size:0.95rem;outline:none;background:#f8fafc;margin-top:4px;" />
-                        </div>
-                        <div>
-                            <div class="label">Sampai Tanggal</div>
-                            <input type="date" id="report-end-date" style="border:1px solid rgba(15,23,42,.12);border-radius:12px;padding:8px 12px;font-size:0.95rem;outline:none;background:#f8fafc;margin-top:4px;" />
-                        </div>
-                    </div>
-                    <div>
-                        <div class="label">Filter Tipe</div>
-                        <select id="report-payment-filter" style="border:1px solid rgba(15,23,42,.12);border-radius:12px;padding:8px 12px;font-size:0.95rem;outline:none;background:#f8fafc;margin-top:4px;">
-                            <option value="all">Semua (Offline & Online)</option>
-                            <option value="offline">Offline (Cash)</option>
-                            <option value="online">Online (QR & TF)</option>
-                        </select>
-                    </div>
-                    <button type="button" class="export-btn" onclick="exportReportToPdf()">Export ke PDF</button>
                 </div>
             </div>
         </div>
@@ -1022,9 +1096,29 @@ function renderReports(){
         document.getElementById('report-start-date').value = formatYYYYMMDD(firstDay);
         document.getElementById('report-end-date').value = formatYYYYMMDD(today);
         
+        // Show / hide and populate outlet filter for admin
+        const access = (CURRENT_EMPLOYEE && (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '')).toLowerCase();
+        const isSysAdmin = access === 'admin';
+        const outletFilterContainer = document.getElementById('report-outlet-filter-container');
+        const outletFilter = document.getElementById('report-outlet-filter');
+        
+        if (isSysAdmin && outletFilterContainer) {
+            outletFilterContainer.classList.remove('hidden');
+            if (outletFilter && Array.isArray(OUTLETS)) {
+                outletFilter.innerHTML = '<option value="all">Semua Cabang</option>' + 
+                    OUTLETS.map(out => `<option value="${out.name}">${out.name}</option>`).join('');
+            }
+        } else if (outletFilterContainer) {
+            outletFilterContainer.classList.add('hidden');
+        }
+
         document.getElementById('report-payment-filter').addEventListener('change', updateReportData);
         document.getElementById('report-start-date').addEventListener('change', updateReportData);
         document.getElementById('report-end-date').addEventListener('change', updateReportData);
+        
+        if (outletFilter) {
+            outletFilter.addEventListener('change', updateReportData);
+        }
         
         updateReportData();
     });
@@ -1036,13 +1130,26 @@ function updateReportData() {
     const startVal = document.getElementById('report-start-date').value;
     const endVal = document.getElementById('report-end-date').value;
     
+    // Filter by branch/outlet
+    const outletFilterEl = document.getElementById('report-outlet-filter');
+    const outletFilterVal = outletFilterEl ? outletFilterEl.value : 'all';
+    
     let filteredTransactions = allTransactions;
+    if (outletFilterVal !== 'all') {
+        filteredTransactions = filteredTransactions.filter(tx => tx.outlet === outletFilterVal);
+    }
     
     // Filter by payment method
-    if (filterVal === 'offline') {
-        filteredTransactions = allTransactions.filter(tx => !tx.payment_method || tx.payment_method === 'cash');
-    } else if (filterVal === 'online') {
-        filteredTransactions = allTransactions.filter(tx => tx.payment_method === 'qr' || tx.payment_method === 'tf');
+    if (filterVal !== 'all') {
+        filteredTransactions = filteredTransactions.filter(tx => {
+            const m = tx.payment_method || 'offline_cash';
+            if (filterVal === 'offline_cash') return m === 'offline_cash' || m === 'cash';
+            if (filterVal === 'offline_qr') return m === 'offline_qr' || m === 'qr';
+            if (filterVal === 'online_qr') return m === 'online_qr';
+            if (filterVal === 'online_tf') return m === 'online_tf';
+            if (filterVal === 'offline_tf') return m === 'offline_tf' || m === 'tf';
+            return false;
+        });
     }
     
     // Filter by start date
@@ -1064,6 +1171,8 @@ function updateReportData() {
             return txDate <= endDate;
         });
     }
+    
+    window.FILTERED_TRANSACTIONS = filteredTransactions;
     
     const itemCount = filteredTransactions.reduce((sum, tx) => sum + (tx.items || []).reduce((count, item) => count + (item.qty || 0), 0), 0);
     const grossSales = filteredTransactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
@@ -1108,9 +1217,22 @@ function updateReportData() {
     `).join('') : '<div class="empty-state">Belum ada data produk terjual.</div>';
     document.getElementById('top-products').innerHTML = topProductsHtml;
 
-    // Offline / Online Breakdown (Always calculated on all transactions)
-    const grossOffline = allTransactions.filter(tx => !tx.payment_method || tx.payment_method === 'cash').reduce((sum, tx) => sum + (tx.total || 0), 0);
-    const grossOnline = allTransactions.filter(tx => tx.payment_method === 'qr' || tx.payment_method === 'tf').reduce((sum, tx) => sum + (tx.total || 0), 0);
+    // Offline / Online Breakdown (Filtered by selected outlet as well)
+    let outletTransactions = allTransactions;
+    if (outletFilterVal !== 'all') {
+        outletTransactions = allTransactions.filter(tx => tx.outlet === outletFilterVal);
+    }
+
+    const grossOffline = outletTransactions.filter(tx => {
+        const m = tx.payment_method || 'offline_cash';
+        return m === 'offline_cash' || m === 'cash' || m === 'offline_qr' || m === 'offline_tf';
+    }).reduce((sum, tx) => sum + (tx.total || 0), 0);
+    
+    const grossOnline = outletTransactions.filter(tx => {
+        const m = tx.payment_method;
+        return m === 'online_qr' || m === 'online_tf' || m === 'qr' || m === 'tf';
+    }).reduce((sum, tx) => sum + (tx.total || 0), 0);
+    
     document.getElementById('gross-sales-offline').innerText = formatRupiah(grossOffline);
     document.getElementById('gross-sales-online').innerText = formatRupiah(grossOnline);
 
@@ -1133,7 +1255,7 @@ function renderHistoryPagination(filteredTransactions) {
     const paginatedTransactions = filteredTransactions.slice(start, end);
 
     const historyHtml = paginatedTransactions.length ? paginatedTransactions.map(tx => {
-        const methodLabel = tx.payment_method ? tx.payment_method.toUpperCase() : 'CASH';
+        const methodLabel = getPaymentMethodLabel(tx.payment_method);
         return `
             <div class="transaction-item">
                 <div class="transaction-info">
@@ -1163,30 +1285,7 @@ function renderHistoryPagination(filteredTransactions) {
 
 function changeHistoryPage(delta) {
     currentHistoryPage += delta;
-    const allTransactions = window.ALL_TRANSACTIONS || [];
-    const filterVal = document.getElementById('report-payment-filter').value;
-    const startVal = document.getElementById('report-start-date').value;
-    const endVal = document.getElementById('report-end-date').value;
-    
-    let filteredTransactions = allTransactions;
-    if (filterVal === 'offline') {
-        filteredTransactions = allTransactions.filter(tx => !tx.payment_method || tx.payment_method === 'cash');
-    } else if (filterVal === 'online') {
-        filteredTransactions = allTransactions.filter(tx => tx.payment_method === 'qr' || tx.payment_method === 'tf');
-    }
-    
-    if (startVal) {
-        const startDate = new Date(startVal);
-        startDate.setHours(0, 0, 0, 0);
-        filteredTransactions = filteredTransactions.filter(tx => new Date(tx.created_at) >= startDate);
-    }
-    if (endVal) {
-        const endDate = new Date(endVal);
-        endDate.setHours(23, 59, 59, 999);
-        filteredTransactions = filteredTransactions.filter(tx => new Date(tx.created_at) <= endDate);
-    }
-    
-    renderHistoryPagination(filteredTransactions);
+    renderHistoryPagination(window.FILTERED_TRANSACTIONS || []);
 }
 
 function exportReportToPdf() {
@@ -1194,25 +1293,10 @@ function exportReportToPdf() {
     const endVal = document.getElementById('report-end-date').value;
     const filterVal = document.getElementById('report-payment-filter').value;
     
-    const allTransactions = window.ALL_TRANSACTIONS || [];
+    const outletFilterEl = document.getElementById('report-outlet-filter');
+    const selectedOutletName = outletFilterEl ? outletFilterEl.value : 'all';
     
-    let filteredTransactions = allTransactions;
-    if (filterVal === 'offline') {
-        filteredTransactions = allTransactions.filter(tx => !tx.payment_method || tx.payment_method === 'cash');
-    } else if (filterVal === 'online') {
-        filteredTransactions = allTransactions.filter(tx => tx.payment_method === 'qr' || tx.payment_method === 'tf');
-    }
-    
-    if (startVal) {
-        const startDate = new Date(startVal);
-        startDate.setHours(0, 0, 0, 0);
-        filteredTransactions = filteredTransactions.filter(tx => new Date(tx.created_at) >= startDate);
-    }
-    if (endVal) {
-        const endDate = new Date(endVal);
-        endDate.setHours(23, 59, 59, 999);
-        filteredTransactions = filteredTransactions.filter(tx => new Date(tx.created_at) <= endDate);
-    }
+    const filteredTransactions = window.FILTERED_TRANSACTIONS || [];
     
     const grossSales = filteredTransactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
     const transactionCount = filteredTransactions.length;
@@ -1238,10 +1322,21 @@ function exportReportToPdf() {
     printDiv.style.fontFamily = 'Arial, sans-serif';
     
     let filterText = 'Semua (Offline & Online)';
-    if (filterVal === 'offline') filterText = 'Offline (Cash)';
-    if (filterVal === 'online') filterText = 'Online (QR & TF)';
+    if (filterVal === 'offline_cash') filterText = 'Offline Cash';
+    if (filterVal === 'offline_qr') filterText = 'Offline QR';
+    if (filterVal === 'online_qr') filterText = 'Online QR';
+    if (filterVal === 'online_tf') filterText = 'Online TF';
+    if (filterVal === 'offline_tf') filterText = 'Offline TF';
     
-    const outletText = (CURRENT_EMPLOYEE && CURRENT_EMPLOYEE.outlet) ? `<h4 style="margin: 5px 0; color: #10b981; font-size: 1.1rem; font-weight: 700;">Cabang: ${CURRENT_EMPLOYEE.outlet.name}</h4>` : '';
+    let outletText = '';
+    if (selectedOutletName !== 'all') {
+        outletText = `<h4 style="margin: 5px 0; color: #10b981; font-size: 1.1rem; font-weight: 700;">Cabang: ${selectedOutletName}</h4>`;
+    } else if (CURRENT_EMPLOYEE && CURRENT_EMPLOYEE.outlet) {
+        outletText = `<h4 style="margin: 5px 0; color: #10b981; font-size: 1.1rem; font-weight: 700;">Cabang: ${CURRENT_EMPLOYEE.outlet.name}</h4>`;
+    } else {
+        outletText = `<h4 style="margin: 5px 0; color: #10b981; font-size: 1.1rem; font-weight: 700;">Cabang: Semua Cabang</h4>`;
+    }
+
     printDiv.innerHTML = `
         <div style="text-align: center; margin-bottom: 25px;">
             <h2 style="margin: 0; font-size: 1.8rem;">LAPORAN TRANSAKSI PENJUALAN</h2>
@@ -1294,7 +1389,7 @@ function exportReportToPdf() {
                         <td style="border: 1px solid #cbd5e1; padding: 8px;">${tx.created_at ? new Date(tx.created_at).toLocaleString('id-ID') : '-'}</td>
                         <td style="border: 1px solid #cbd5e1; padding: 8px;">${tx.cashier || '-'}</td>
                         <td style="border: 1px solid #cbd5e1; padding: 8px;">${tx.outlet || '-'}</td>
-                        <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">${(tx.payment_method || 'CASH').toUpperCase()}</td>
+                        <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">${getPaymentMethodLabel(tx.payment_method)}</td>
                         <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: right; font-weight: bold;">${formatRupiah(tx.total || 0)}</td>
                     </tr>
                 `).join('')}
@@ -1326,6 +1421,7 @@ function exportReportToPdf() {
         document.head.removeChild(style);
     }, 500);
 }
+
 
 function closeModal(event){
     if(event) event.stopPropagation();
@@ -1422,6 +1518,17 @@ function bindOutletForm(){
     });
 }
 
+function toggleOutletStockInput(checkbox) {
+    const outletId = checkbox.dataset.outletId;
+    const inputsRow = document.getElementById(`stock-inputs-${outletId}`);
+    if (checkbox.checked) {
+        inputsRow.classList.remove('hidden');
+    } else {
+        inputsRow.classList.add('hidden');
+        inputsRow.querySelector('.outlet-add-stock').value = 0;
+    }
+}
+
 function openAddProduct(){
     editingProduct = null;
     document.getElementById('modal-title').innerText = 'Tambah Produk';
@@ -1429,13 +1536,27 @@ function openAddProduct(){
     document.getElementById('field-category').value = '';
     document.getElementById('field-price').value = '';
     document.getElementById('field-modal').value = '';
-    document.getElementById('field-current-stock').value = 0;
-    document.getElementById('field-add-stock').value = 0;
     document.getElementById('field-image').value = '';
     
-    const outletSelect = document.getElementById('field-outlet');
-    outletSelect.innerHTML = '<option value="">Semua Outlet</option>' + OUTLETS.map(out => `<option value="${out.id}">${out.name}</option>`).join('');
-    outletSelect.value = '';
+    const container = document.getElementById('outlet-stocks-container');
+    container.innerHTML = OUTLETS.map(out => `
+        <div class="outlet-stock-row" style="display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom: 1px solid rgba(0,0,0,0.02); padding-bottom: 8px;">
+            <label style="margin:0; display:flex; align-items:center; gap:8px; cursor:pointer; flex:1;">
+                <input type="checkbox" class="outlet-checkbox" data-outlet-id="${out.id}" onchange="toggleOutletStockInput(this)" style="width:auto; margin:0;" />
+                <span style="font-weight: 500;">${out.name}</span>
+            </label>
+            <div class="stock-inputs-row hidden" id="stock-inputs-${out.id}" style="display:flex; align-items:center; gap:8px; width:200px;">
+                <div style="flex:1;">
+                    <span style="font-size:0.7rem; color:#64748b; display:block; font-weight:600;">Stok</span>
+                    <input type="number" class="outlet-current-stock" disabled style="background:#cbd5e1; cursor:not-allowed; padding:6px 10px; margin:4px 0 0; font-size:0.9rem;" value="0" />
+                </div>
+                <div style="flex:1;">
+                    <span style="font-size:0.7rem; color:#64748b; display:block; font-weight:600;">Tambah</span>
+                    <input type="number" class="outlet-add-stock" style="padding:6px 10px; margin:4px 0 0; font-size:0.9rem; border:1px solid #cbd5e1; border-radius:8px;" value="0" placeholder="0" />
+                </div>
+            </div>
+        </div>
+    `).join('');
 
     document.getElementById('product-image-preview').innerHTML = '';
     document.getElementById('product-modal').classList.remove('hidden');
@@ -1450,13 +1571,36 @@ function openEditProduct(productId){
     document.getElementById('field-category').value = product.category || '';
     document.getElementById('field-price').value = product.price || '';
     document.getElementById('field-modal').value = product.modal || '';
-    document.getElementById('field-current-stock').value = product.stock || 0;
-    document.getElementById('field-add-stock').value = 0;
     document.getElementById('field-image').value = '';
     
-    const outletSelect = document.getElementById('field-outlet');
-    outletSelect.innerHTML = '<option value="">Semua Outlet</option>' + OUTLETS.map(out => `<option value="${out.id}" ${out.id === product.outlet_id ? 'selected' : ''}>${out.name}</option>`).join('');
-    outletSelect.value = product.outlet_id || '';
+    const container = document.getElementById('outlet-stocks-container');
+    container.innerHTML = OUTLETS.map(out => {
+        const productStockInfo = Array.isArray(product.stocks) 
+            ? product.stocks.find(s => s.outlet_id === out.id) 
+            : null;
+        
+        const isChecked = !!productStockInfo;
+        const currentStockVal = productStockInfo ? productStockInfo.stock : 0;
+        
+        return `
+            <div class="outlet-stock-row" style="display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom: 1px solid rgba(0,0,0,0.02); padding-bottom: 8px;">
+                <label style="margin:0; display:flex; align-items:center; gap:8px; cursor:pointer; flex:1;">
+                    <input type="checkbox" class="outlet-checkbox" data-outlet-id="${out.id}" onchange="toggleOutletStockInput(this)" ${isChecked ? 'checked' : ''} style="width:auto; margin:0;" />
+                    <span style="font-weight: 500;">${out.name}</span>
+                </label>
+                <div class="stock-inputs-row ${isChecked ? '' : 'hidden'}" id="stock-inputs-${out.id}" style="display:flex; align-items:center; gap:8px; width:200px;">
+                    <div style="flex:1;">
+                        <span style="font-size:0.7rem; color:#64748b; display:block; font-weight:600;">Stok</span>
+                        <input type="number" class="outlet-current-stock" disabled style="background:#cbd5e1; cursor:not-allowed; padding:6px 10px; margin:4px 0 0; font-size:0.9rem;" value="${currentStockVal}" />
+                    </div>
+                    <div style="flex:1;">
+                        <span style="font-size:0.7rem; color:#64748b; display:block; font-weight:600;">Tambah</span>
+                        <input type="number" class="outlet-add-stock" style="padding:6px 10px; margin:4px 0 0; font-size:0.9rem; border:1px solid #cbd5e1; border-radius:8px;" value="0" placeholder="0" />
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
 
     document.getElementById('product-image-preview').innerHTML = product.image ? `<div style="display:flex;align-items:center;gap:10px;"><img src="${resolveImageUrl(product.image)}" style="width:56px;height:56px;border-radius:18px;object-fit:cover;" alt="Gambar Produk" /><span style="color:#475569;">Gambar saat ini ditampilkan. Unggah file baru untuk mengganti.</span></div>` : '';
     document.getElementById('product-modal').classList.remove('hidden');
@@ -1472,14 +1616,18 @@ function bindProductForm(){
         formData.append('price', parseInt(document.getElementById('field-price').value, 10) || 0);
         formData.append('modal', parseInt(document.getElementById('field-modal').value, 10) || 0);
         
-        const currentStock = parseInt(document.getElementById('field-current-stock').value, 10) || 0;
-        const addStock = parseInt(document.getElementById('field-add-stock').value, 10) || 0;
-        formData.append('stock', currentStock + addStock);
-        
-        const outletVal = document.getElementById('field-outlet').value;
-        if (outletVal) {
-            formData.append('outlet_id', outletVal);
-        }
+        // Collect multi-outlet stocks
+        const outletStocks = [];
+        document.querySelectorAll('.outlet-checkbox:checked').forEach(cb => {
+            const outletId = cb.dataset.outletId;
+            const currentStock = parseInt(cb.closest('.outlet-stock-row').querySelector('.outlet-current-stock').value, 10) || 0;
+            const addStock = parseInt(cb.closest('.outlet-stock-row').querySelector('.outlet-add-stock').value, 10) || 0;
+            outletStocks.push({
+                outlet_id: parseInt(outletId, 10),
+                stock: currentStock + addStock
+            });
+        });
+        formData.append('outlet_stocks', JSON.stringify(outletStocks));
         
         const imageFile = document.getElementById('field-image').files[0];
         if (imageFile) formData.append('image', imageFile);
@@ -1570,32 +1718,15 @@ async function deleteProduct(id){
     }
 }
 
-function generateQuickCash(total) {
-    const container = document.getElementById('quick-cash-container');
-    const nominals = [total];
-    
-    // Add next high denominations
-    const standards = [10000, 20000, 50000, 100000, 200000];
-    standards.forEach(std => {
-        if (std > total && !nominals.includes(std)) {
-            nominals.push(std);
-        }
-    });
-    
-    // Sort and take first unique nominals
-    const uniqueNominals = [...new Set(nominals)].sort((a,b) => a-b).slice(0, 6);
-    
-    container.innerHTML = uniqueNominals.map(val => `
-        <button type="button" class="secondary-btn" style="padding: 10px 4px; font-size: 0.85rem; font-weight: bold; text-align: center;" onclick="setPaymentPaid(${val})">
-            ${val === total ? 'Uang Pas' : formatRupiah(val)}
-        </button>
-    `).join('');
-}
-
-function setPaymentPaid(val) {
-    const paidInput = document.getElementById('payment-paid-input');
-    paidInput.value = val;
-    updatePaymentChange();
+function getPaymentMethodLabel(method) {
+    if (!method) return 'CASH (OFFLINE)';
+    const m = method.toLowerCase();
+    if (m === 'cash' || m === 'offline_cash') return 'CASH (OFFLINE)';
+    if (m === 'qr' || m === 'offline_qr') return 'QRIS (OFFLINE)';
+    if (m === 'online_qr') return 'QRIS (ONLINE)';
+    if (m === 'tf' || m === 'offline_tf') return 'TRANSFER (OFFLINE)';
+    if (m === 'online_tf') return 'TRANSFER (ONLINE)';
+    return method.toUpperCase();
 }
 
 function updatePaymentChange() {
@@ -1620,34 +1751,35 @@ function bindPaymentForm(){
     const form = document.getElementById('payment-form');
     const paidInput = document.getElementById('payment-paid-input');
     const methodSelect = document.getElementById('payment-method-select');
+    const typeSelect = document.getElementById('payment-type-select');
     
     paidInput.addEventListener('input', updatePaymentChange);
     
     methodSelect.addEventListener('change', () => {
         const method = methodSelect.value;
         const total = CART.reduce((sum, item) => sum + item.qty * item.price, 0);
-        const quickCash = document.getElementById('quick-cash-container');
         const qrDetails = document.getElementById('qr-payment-details');
         const tfDetails = document.getElementById('tf-payment-details');
+        const typeContainer = document.getElementById('payment-type-container');
         
         if (method === 'qr') {
             paidInput.value = total;
             paidInput.readOnly = true;
-            quickCash.style.display = 'none';
             qrDetails.classList.remove('hidden');
             tfDetails.classList.add('hidden');
+            typeContainer.classList.remove('hidden');
         } else if (method === 'tf') {
             paidInput.value = total;
             paidInput.readOnly = true;
-            quickCash.style.display = 'none';
             qrDetails.classList.add('hidden');
             tfDetails.classList.remove('hidden');
+            typeContainer.classList.remove('hidden');
         } else {
             paidInput.value = total;
             paidInput.readOnly = false;
-            quickCash.style.display = 'grid';
             qrDetails.classList.add('hidden');
             tfDetails.classList.add('hidden');
+            typeContainer.classList.add('hidden');
         }
         updatePaymentChange();
     });
@@ -1660,6 +1792,13 @@ function bindPaymentForm(){
         
         closeModal();
         
+        let paymentMethodValue = methodSelect.value;
+        if (paymentMethodValue === 'qr' || paymentMethodValue === 'tf') {
+            paymentMethodValue = `${typeSelect.value}_${paymentMethodValue}`;
+        } else {
+            paymentMethodValue = 'offline_cash';
+        }
+        
         const response = await fetch('/pos/api/transactions', {
             method:'POST',
             headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},
@@ -1667,7 +1806,7 @@ function bindPaymentForm(){
                 items:CART,
                 total,
                 paid,
-                payment_method: methodSelect.value,
+                payment_method: paymentMethodValue,
                 cashier: CURRENT_EMPLOYEE ? CURRENT_EMPLOYEE.name : 'Kasir',
                 outlet: (CURRENT_EMPLOYEE && CURRENT_EMPLOYEE.outlet) ? CURRENT_EMPLOYEE.outlet.name : 'Outlet Pusat'
             })
@@ -1788,7 +1927,13 @@ async function handleLogin(e) {
         document.getElementById('pos-app-shell').classList.remove('hidden');
         applyEmployeeRBAC();
         await loadOutlets();
-        showPage('transaksi');
+        
+        const access = (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase();
+        if (access === 'admin') {
+            showPage('produk');
+        } else {
+            showPage('transaksi');
+        }
     } else {
         const err = await res.json();
         const errorDiv = document.getElementById('login-error');
@@ -1821,7 +1966,13 @@ async function checkSession() {
         document.getElementById('pos-app-shell').classList.remove('hidden');
         applyEmployeeRBAC();
         await loadOutlets();
-        showPage('transaksi');
+        
+        const access = (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase();
+        if (access === 'admin') {
+            showPage('produk');
+        } else {
+            showPage('transaksi');
+        }
     } else {
         document.getElementById('pos-app-shell').classList.add('hidden');
         document.getElementById('login-screen').classList.remove('hidden');
@@ -1869,22 +2020,26 @@ function applyEmployeeRBAC() {
         }
     }
     
+    const menuTransaksi = document.getElementById('menu-transaksi');
     const menuProduk = document.getElementById('menu-produk');
     const menuPegawai = document.getElementById('menu-pegawai');
     const menuOutlet = document.getElementById('menu-outlet');
     const menuLaporan = document.getElementById('menu-laporan');
     
     if (access === 'admin') {
+        menuTransaksi.classList.add('hidden');
         menuProduk.classList.remove('hidden');
         menuPegawai.classList.remove('hidden');
         menuOutlet.classList.remove('hidden');
         menuLaporan.classList.remove('hidden');
     } else if (access === 'supervisor') {
+        menuTransaksi.classList.remove('hidden');
         menuProduk.classList.add('hidden');
         menuPegawai.classList.add('hidden');
         menuOutlet.classList.add('hidden');
         menuLaporan.classList.remove('hidden');
     } else {
+        menuTransaksi.classList.remove('hidden');
         menuProduk.classList.add('hidden');
         menuPegawai.classList.add('hidden');
         menuOutlet.classList.add('hidden');

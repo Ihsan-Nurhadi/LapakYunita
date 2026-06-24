@@ -9,10 +9,12 @@ class Product extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name','price','modal','category','stock','image','outlet_id'];
+    protected $fillable = ['name','price','modal','category','image'];
 
-    public function outlet()
+    public function outlets()
     {
-        return $this->belongsTo(Outlet::class, 'outlet_id');
+        return $this->belongsToMany(Outlet::class, 'product_outlet')
+                    ->withPivot('stock')
+                    ->withTimestamps();
     }
 }

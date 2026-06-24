@@ -19,21 +19,48 @@ class PosController extends Controller
 
     public function products()
     {
-        $query = Product::with('outlet')->orderBy('name');
+        $query = Product::with('outlets')->orderBy('name');
         
         $employeeId = session('employee_id');
+        $employee = null;
         if ($employeeId) {
             $employee = Employee::find($employeeId);
             if ($employee && strtolower($employee->access ?: $employee->role) !== 'admin') {
                 if ($employee->outlet_id) {
-                    $query->where('outlet_id', $employee->outlet_id);
+                    $query->whereHas('outlets', function($q) use ($employee) {
+                        $q->where('outlets.id', $employee->outlet_id);
+                    });
                 } else {
-                    $query->whereNull('outlet_id');
+                    $query->whereDoesntHave('outlets');
                 }
             }
         }
         
-        return $query->get();
+        return $query->get()->map(function($product) use ($employee) {
+            $isAdmin = $employee && strtolower($employee->access ?: $employee->role) === 'admin';
+            
+            if ($isAdmin) {
+                $product->stocks = $product->outlets->map(function($o) {
+                    return [
+                        'outlet_id' => $o->id,
+                        'outlet_name' => $o->name,
+                        'stock' => $o->pivot->stock
+                    ];
+                });
+                $product->stock = $product->outlets->sum('pivot.stock');
+            } else {
+                $outletId = $employee ? $employee->outlet_id : null;
+                if ($outletId) {
+                    $pivot = $product->outlets->firstWhere('id', $outletId);
+                    $product->stock = $pivot ? $pivot->pivot->stock : 0;
+                    $product->outlet_id = $outletId;
+                } else {
+                    $product->stock = 0;
+                    $product->outlet_id = null;
+                }
+            }
+            return $product;
+        });
     }
 
     public function storeProduct(Request $r)
@@ -43,16 +70,26 @@ class PosController extends Controller
             'price' => 'required|integer',
             'modal' => 'nullable|integer',
             'category' => 'nullable|string',
-            'stock' => 'nullable|integer',
             'image' => 'nullable|image|max:2048',
-            'outlet_id' => 'nullable|integer|exists:outlets,id',
+            'outlet_stocks' => 'nullable|string',
         ]);
 
         if ($r->hasFile('image')) {
             $data['image'] = $r->file('image')->store('products', 'public');
         }
 
-        return Product::create($data);
+        $product = Product::create($data);
+
+        $outletStocks = json_decode($r->input('outlet_stocks'), true);
+        if (is_array($outletStocks)) {
+            $syncData = [];
+            foreach ($outletStocks as $os) {
+                $syncData[$os['outlet_id']] = ['stock' => $os['stock']];
+            }
+            $product->outlets()->sync($syncData);
+        }
+
+        return $product;
     }
 
     public function updateProduct(Request $r, Product $product)
@@ -62,9 +99,8 @@ class PosController extends Controller
             'price' => 'required|integer',
             'modal' => 'nullable|integer',
             'category' => 'nullable|string',
-            'stock' => 'nullable|integer',
             'image' => 'nullable|image|max:2048',
-            'outlet_id' => 'nullable|integer|exists:outlets,id',
+            'outlet_stocks' => 'nullable|string',
         ]);
 
         if ($r->hasFile('image')) {
@@ -74,6 +110,16 @@ class PosController extends Controller
         }
 
         $product->update($data);
+
+        $outletStocks = json_decode($r->input('outlet_stocks'), true);
+        if (is_array($outletStocks)) {
+            $syncData = [];
+            foreach ($outletStocks as $os) {
+                $syncData[$os['outlet_id']] = ['stock' => $os['stock']];
+            }
+            $product->outlets()->sync($syncData);
+        }
+
         return $product;
     }
 
@@ -218,7 +264,7 @@ class PosController extends Controller
             'items' => 'required|array',
             'total' => 'required|integer',
             'paid' => 'required|integer',
-            'payment_method' => 'required|string|in:cash,qr,tf',
+            'payment_method' => 'required|string|in:cash,qr,tf,offline_cash,offline_qr,online_qr,offline_tf,online_tf',
             'cashier' => 'nullable|string',
             'outlet' => 'nullable|string'
         ]);
@@ -241,6 +287,13 @@ class PosController extends Controller
             'outlet' => $outletName,
         ]);
 
+        $outlet = null;
+        if ($employee && $employee->outlet_id) {
+            $outlet = $employee->outlet;
+        } else {
+            $outlet = Outlet::where('name', $outletName)->first();
+        }
+
         foreach ($data['items'] as $it) {
             $product = Product::find($it['id']);
             TransactionItem::create([
@@ -250,8 +303,12 @@ class PosController extends Controller
                 'qty' => $it['qty'] ?? 1,
                 'price' => $it['price'] ?? 0,
             ]);
-            if ($product) {
-                $product->decrement('stock', $it['qty'] ?? 1);
+            if ($product && $outlet) {
+                $pivot = $product->outlets()->where('outlet_id', $outlet->id)->first();
+                if ($pivot) {
+                    $newStock = max(0, $pivot->pivot->stock - ($it['qty'] ?? 1));
+                    $product->outlets()->updateExistingPivot($outlet->id, ['stock' => $newStock]);
+                }
             }
         }
 
