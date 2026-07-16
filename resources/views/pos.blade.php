@@ -263,11 +263,32 @@
                 <h2 id="page-title">Transaksi</h2>
                 <p id="page-subtitle">Kelola penjualan, cari produk, dan selesaikan pembayaran dengan cepat.</p>
             </div>
-            <button id="action-button" class="primary-btn">+ Tambah Produk</button>
+            <div style="display:flex; gap:12px;">
+                <button id="action-button-2" class="secondary-btn hidden" style="border-color:#10b981; color:#10b981; font-weight:700;">Buat Diskon</button>
+                <button id="action-button" class="primary-btn">+ Tambah Produk</button>
+            </div>
         </section>
 
         <section id="page-content"></section>
     </main>
+</div>
+
+<div id="global-discount-modal" class="modal-backdrop hidden" onclick="closeModal(event)">
+    <div class="modal-pane" onclick="event.stopPropagation()">
+        <h3>Pengaturan Diskon Keseluruhan</h3>
+        <p style="color:#64748b; font-size:0.9rem; margin-top:-8px; margin-bottom:16px;">Tentukan batas minimum pembelian dan persentase diskon yang diberikan.</p>
+        <form id="global-discount-form">
+            <label>Batas Minimum Pembelian (Rp)</label>
+            <input type="number" id="global-discount-min" required placeholder="Contoh: 200000" />
+            <label>Jumlah Diskon (%)</label>
+            <input type="number" id="global-discount-percent" required placeholder="Contoh: 5" min="0" max="100" />
+            
+            <div class="modal-actions">
+                <button type="button" class="secondary-btn" onclick="closeModal()">Batal</button>
+                <button type="submit" class="primary-btn">Simpan Aturan</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <div id="product-modal" class="modal-backdrop hidden" onclick="closeModal(event)">
@@ -335,6 +356,14 @@
             <div style="border-top: 1px dashed #cbd5e1; margin-top: 10px; padding-top: 10px;"></div>
 
             <table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 4px 0; color: #64748b;">Subtotal</td>
+                    <td style="text-align: right;" id="invoice-subtotal">Rp 0</td>
+                </tr>
+                <tr id="invoice-discount-row" class="hidden">
+                    <td style="padding: 4px 0; color: #ef4444;">Diskon</td>
+                    <td style="text-align: right; color: #ef4444;" id="invoice-discount">-Rp 0</td>
+                </tr>
                 <tr>
                     <td style="padding: 4px 0; font-weight: bold;">Total</td>
                     <td style="text-align: right; font-weight: bold;" id="invoice-total">Rp 0</td>
@@ -669,6 +698,7 @@ let editingOutlet = null;
 let CURRENT_EMPLOYEE = null;
 let CURRENT_DRAFT_ID = null;
 let CURRENT_CUSTOMER_ID = null;
+let GLOBAL_DISCOUNT_RULE = null;
 let pinBuffer = '';
 
 function setActiveMenu(page) {
@@ -677,13 +707,34 @@ function setActiveMenu(page) {
     });
 }
 
-function setPageHeader(title, subtitle, actionLabel = '+ Tambah Produk', showAction = true, actionFn = null) {
+function setPageHeader(title, subtitle, actionLabel = '+ Tambah Produk', showAction = true, actionFn = null, showAction2 = false, action2Fn = null) {
     document.getElementById('page-title').innerText = title;
     document.getElementById('page-subtitle').innerText = subtitle;
     const actionBtn = document.getElementById('action-button');
     actionBtn.innerText = actionLabel;
     actionBtn.style.display = showAction ? 'inline-flex' : 'none';
     actionBtn.onclick = actionFn || (() => {});
+    
+    const actionBtn2 = document.getElementById('action-button-2');
+    if (actionBtn2) {
+        if (showAction2) {
+            actionBtn2.classList.remove('hidden');
+            actionBtn2.onclick = action2Fn || (() => {});
+        } else {
+            actionBtn2.classList.add('hidden');
+        }
+    }
+}
+
+async function loadGlobalDiscount(){
+    try {
+        const res = await fetch('/pos/api/discount-rule');
+        if (res.ok) {
+            GLOBAL_DISCOUNT_RULE = await res.json();
+        }
+    } catch (e) {
+        console.error("Error loading global discount:", e);
+    }
 }
 
 async function loadProducts(){
@@ -709,7 +760,7 @@ function showPage(page){
         setPageHeader('Transaksi', 'Cari produk, tambah ke keranjang, lalu selesaikan pembayaran.', '+ Tambah Produk', false);
         renderTransaction();
     } else if(page === 'produk') {
-        setPageHeader('Kelola Produk', 'Tambahkan, edit, dan hapus produk secara cepat.', '+ Tambah Produk', true, openAddProduct);
+        setPageHeader('Kelola Produk', 'Tambahkan, edit, dan hapus produk secara cepat.', '+ Tambah Produk', true, openAddProduct, true, openGlobalDiscountModal);
         renderProductsAdmin();
     } else if(page === 'pegawai') {
         setPageHeader('Pegawai', 'Lihat daftar pegawai dan outlet yang mereka kelola.', '+ Tambah Pegawai', true, openAddEmployee);
@@ -801,7 +852,7 @@ function saveDraft(){
         return showAlert('Keranjang kosong. Tambahkan produk sebelum menyimpan draft.', 'Peringatan', '⚠️');
     }
 
-    const total = CART.reduce((sum, item) => sum + item.qty * item.price, 0);
+    const { finalTotal, globalDiscountAmount } = calculateCartTotal();
 
     fetch('/pos/api/drafts', {
         method: 'POST',
@@ -811,7 +862,8 @@ function saveDraft(){
         },
         body: JSON.stringify({
             items: CART,
-            total,
+            total: finalTotal,
+            global_discount_amount: globalDiscountAmount,
             draft_id: CURRENT_DRAFT_ID || null,
             cashier: CURRENT_EMPLOYEE ? CURRENT_EMPLOYEE.name : 'Kasir',
             outlet: (CURRENT_EMPLOYEE && CURRENT_EMPLOYEE.outlet) ? CURRENT_EMPLOYEE.outlet.name : 'Outlet Pusat',
@@ -981,14 +1033,35 @@ function removeCartItem(id){
     updateCartUI();
 }
 
+function calculateCartTotal() {
+    const subtotal = CART.reduce((sum, item) => sum + item.qty * item.price, 0);
+    let globalDiscountAmount = 0;
+    
+    if (GLOBAL_DISCOUNT_RULE && GLOBAL_DISCOUNT_RULE.min_purchase > 0 && subtotal >= GLOBAL_DISCOUNT_RULE.min_purchase) {
+        globalDiscountAmount = Math.floor(subtotal * (GLOBAL_DISCOUNT_RULE.discount_percent / 100));
+    }
+    
+    return {
+        subtotal,
+        globalDiscountAmount,
+        finalTotal: Math.max(0, subtotal - globalDiscountAmount)
+    };
+}
+
 function updateCartUI(){
     const count = CART.reduce((sum, item) => sum + item.qty, 0);
-    const total = CART.reduce((sum, item) => sum + item.qty * item.price, 0);
+    const { subtotal, globalDiscountAmount, finalTotal } = calculateCartTotal();
     const cartCount = document.getElementById('cart-count');
     const cartItems = document.getElementById('cart-items');
     const cartTotal = document.getElementById('cart-total');
     if(cartCount) cartCount.innerText = count;
-    if(cartTotal) cartTotal.innerText = formatRupiah(total);
+    if(cartTotal) {
+        if (globalDiscountAmount > 0) {
+            cartTotal.innerHTML = `<span style="font-size:0.9rem; text-decoration:line-through; color:#94a3b8; margin-right:8px;">${formatRupiah(subtotal)}</span><span>${formatRupiah(finalTotal)}</span>`;
+        } else {
+            cartTotal.innerText = formatRupiah(finalTotal);
+        }
+    }
     if(cartItems) {
         cartItems.innerHTML = CART.length ? CART.map(item => `
             <div class="cart-item">
@@ -1011,11 +1084,11 @@ function updateCartUI(){
 
 function processPayment(){
     if(!CART.length) return showAlert('Silakan tambahkan produk ke keranjang terlebih dahulu.', 'Keranjang Kosong', '🛒');
-    const total = CART.reduce((sum, item) => sum + item.qty * item.price, 0);
+    const { finalTotal } = calculateCartTotal();
     
-    document.getElementById('payment-total-label').innerText = formatRupiah(total);
+    document.getElementById('payment-total-label').innerText = formatRupiah(finalTotal);
     const paidInput = document.getElementById('payment-paid-input');
-    paidInput.value = total;
+    paidInput.value = finalTotal;
     paidInput.readOnly = false;
     
     const methodSelect = document.getElementById('payment-method-select');
@@ -1523,7 +1596,40 @@ function updateReportData() {
         filteredTransactions = filteredTransactions.filter(tx => tx.outlet === outletFilterVal);
     }
     
-    // Filter by payment method
+    // Filter by start date
+    if (startVal) {
+        filteredTransactions = filteredTransactions.filter(tx => {
+            if (!tx.created_at) return false;
+            // Handle both "YYYY-MM-DDTHH:mm..." and "YYYY-MM-DD HH:mm..."
+            const txDateStr = tx.created_at.substring(0, 10);
+            return txDateStr >= startVal;
+        });
+    }
+    
+    // Filter by end date
+    if (endVal) {
+        filteredTransactions = filteredTransactions.filter(tx => {
+            if (!tx.created_at) return false;
+            const txDateStr = tx.created_at.substring(0, 10);
+            return txDateStr <= endVal;
+        });
+    }
+    
+    // Offline / Online Breakdown (Filtered by selected outlet and date, BUT independent of payment checkboxes)
+    const grossOffline = filteredTransactions.filter(tx => {
+        const m = tx.payment_method || 'offline_cash';
+        return m === 'offline_cash' || m === 'cash' || m === 'offline_qr' || m === 'offline_tf';
+    }).reduce((sum, tx) => sum + (tx.total || 0), 0);
+    
+    const grossOnline = filteredTransactions.filter(tx => {
+        const m = tx.payment_method;
+        return m === 'online_qr' || m === 'online_tf' || m === 'qr' || m === 'tf';
+    }).reduce((sum, tx) => sum + (tx.total || 0), 0);
+    
+    document.getElementById('gross-sales-offline').innerText = formatRupiah(grossOffline);
+    document.getElementById('gross-sales-online').innerText = formatRupiah(grossOnline);
+
+    // Filter by payment method AFTER computing breakdown
     filteredTransactions = filteredTransactions.filter(tx => {
         const m = tx.payment_method || 'offline_cash';
         if (activeFilters.includes('offline_cash') && (m === 'offline_cash' || m === 'cash')) return true;
@@ -1533,27 +1639,7 @@ function updateReportData() {
         if (activeFilters.includes('offline_tf') && (m === 'offline_tf' || m === 'tf')) return true;
         return false;
     });
-    
-    // Filter by start date
-    if (startVal) {
-        const startDate = new Date(startVal);
-        startDate.setHours(0, 0, 0, 0);
-        filteredTransactions = filteredTransactions.filter(tx => {
-            const txDate = new Date(tx.created_at);
-            return txDate >= startDate;
-        });
-    }
-    
-    // Filter by end date
-    if (endVal) {
-        const endDate = new Date(endVal);
-        endDate.setHours(23, 59, 59, 999);
-        filteredTransactions = filteredTransactions.filter(tx => {
-            const txDate = new Date(tx.created_at);
-            return txDate <= endDate;
-        });
-    }
-    
+
     window.FILTERED_TRANSACTIONS = filteredTransactions;
     
     const itemCount = filteredTransactions.reduce((sum, tx) => sum + (tx.items || []).reduce((count, item) => count + (item.qty || 0), 0), 0);
@@ -1598,25 +1684,6 @@ function updateReportData() {
         </div>
     `).join('') : '<div class="empty-state">Belum ada data produk terjual.</div>';
     document.getElementById('top-products').innerHTML = topProductsHtml;
-
-    // Offline / Online Breakdown (Filtered by selected outlet as well)
-    let outletTransactions = allTransactions;
-    if (outletFilterVal !== 'all') {
-        outletTransactions = allTransactions.filter(tx => tx.outlet === outletFilterVal);
-    }
-
-    const grossOffline = outletTransactions.filter(tx => {
-        const m = tx.payment_method || 'offline_cash';
-        return m === 'offline_cash' || m === 'cash' || m === 'offline_qr' || m === 'offline_tf';
-    }).reduce((sum, tx) => sum + (tx.total || 0), 0);
-    
-    const grossOnline = outletTransactions.filter(tx => {
-        const m = tx.payment_method;
-        return m === 'online_qr' || m === 'online_tf' || m === 'qr' || m === 'tf';
-    }).reduce((sum, tx) => sum + (tx.total || 0), 0);
-    
-    document.getElementById('gross-sales-offline').innerText = formatRupiah(grossOffline);
-    document.getElementById('gross-sales-online').innerText = formatRupiah(grossOnline);
 
     renderHistoryPagination(filteredTransactions);
 }
@@ -1815,6 +1882,49 @@ function closeModal(event){
     document.getElementById('invoice-modal').classList.add('hidden');
     document.getElementById('payment-modal').classList.add('hidden');
     document.getElementById('change-pin-modal').classList.add('hidden');
+    document.getElementById('global-discount-modal').classList.add('hidden');
+}
+
+function openGlobalDiscountModal() {
+    if (GLOBAL_DISCOUNT_RULE) {
+        document.getElementById('global-discount-min').value = GLOBAL_DISCOUNT_RULE.min_purchase || '';
+        document.getElementById('global-discount-percent').value = GLOBAL_DISCOUNT_RULE.discount_percent || '';
+    } else {
+        document.getElementById('global-discount-min').value = '';
+        document.getElementById('global-discount-percent').value = '';
+    }
+    document.getElementById('global-discount-modal').classList.remove('hidden');
+}
+
+function bindGlobalDiscountForm() {
+    const form = document.getElementById('global-discount-form');
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const minVal = parseInt(document.getElementById('global-discount-min').value, 10);
+        const pctVal = parseInt(document.getElementById('global-discount-percent').value, 10);
+        
+        if (isNaN(minVal) || isNaN(pctVal)) return showAlert('Mohon isi dengan angka yang benar', 'Peringatan', '⚠️');
+        
+        const res = await fetch('/pos/api/discount-rule', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ min_purchase: minVal, discount_percent: pctVal })
+        });
+        
+        if (res.ok) {
+            GLOBAL_DISCOUNT_RULE = await res.json();
+            closeModal();
+            showAlert('Aturan diskon keseluruhan berhasil disimpan', 'Berhasil', '✅');
+            if (document.getElementById('cart-items') && CART.length > 0) {
+                updateCartUI(); // re-evaluate cart discount
+            }
+        } else {
+            showAlert('Gagal menyimpan aturan diskon', 'Error', '❌');
+        }
+    });
 }
 
 let alertCallback = null;
@@ -2093,6 +2203,15 @@ function showInvoice(tx){
         itemsContainer.innerHTML = '<div style="text-align:center;color:#64748b;">Tidak ada produk</div>';
     }
     
+    document.getElementById('invoice-subtotal').innerText = formatRupiah((tx.total || 0) + (tx.global_discount_amount || 0));
+    
+    if (tx.global_discount_amount && tx.global_discount_amount > 0) {
+        document.getElementById('invoice-discount-row').classList.remove('hidden');
+        document.getElementById('invoice-discount').innerText = '-' + formatRupiah(tx.global_discount_amount);
+    } else {
+        document.getElementById('invoice-discount-row').classList.add('hidden');
+    }
+    
     document.getElementById('invoice-total').innerText = formatRupiah(tx.total || 0);
     document.getElementById('invoice-paid').innerText = formatRupiah(tx.paid || 0);
     document.getElementById('invoice-change').innerText = formatRupiah(tx.change || 0);
@@ -2133,13 +2252,13 @@ function getPaymentMethodLabel(method) {
 }
 
 function updatePaymentChange() {
-    const total = CART.reduce((sum, item) => sum + item.qty * item.price, 0);
+    const { finalTotal } = calculateCartTotal();
     const paid = parseInt(document.getElementById('payment-paid-input').value, 10) || 0;
-    const change = Math.max(0, paid - total);
+    const change = Math.max(0, paid - finalTotal);
     document.getElementById('payment-change-label').innerText = formatRupiah(change);
     
     const confirmBtn = document.getElementById('confirm-payment-btn');
-    if (paid < total) {
+    if (paid < finalTotal) {
         confirmBtn.disabled = true;
         confirmBtn.style.opacity = '0.5';
         confirmBtn.style.cursor = 'not-allowed';
@@ -2160,25 +2279,25 @@ function bindPaymentForm(){
     
     methodSelect.addEventListener('change', () => {
         const method = methodSelect.value;
-        const total = CART.reduce((sum, item) => sum + item.qty * item.price, 0);
+        const { finalTotal } = calculateCartTotal();
         const qrDetails = document.getElementById('qr-payment-details');
         const tfDetails = document.getElementById('tf-payment-details');
         const typeContainer = document.getElementById('payment-type-container');
         
         if (method === 'qr') {
-            paidInput.value = total;
+            paidInput.value = finalTotal;
             paidInput.readOnly = true;
             qrDetails.classList.remove('hidden');
             tfDetails.classList.add('hidden');
             typeContainer.classList.remove('hidden');
         } else if (method === 'tf') {
-            paidInput.value = total;
+            paidInput.value = finalTotal;
             paidInput.readOnly = true;
             qrDetails.classList.add('hidden');
             tfDetails.classList.remove('hidden');
             typeContainer.classList.remove('hidden');
         } else {
-            paidInput.value = total;
+            paidInput.value = finalTotal;
             paidInput.readOnly = false;
             qrDetails.classList.add('hidden');
             tfDetails.classList.add('hidden');
@@ -2189,9 +2308,9 @@ function bindPaymentForm(){
     
     form.addEventListener('submit', async e => {
         e.preventDefault();
-        const total = CART.reduce((sum, item) => sum + item.qty * item.price, 0);
+        const { finalTotal, globalDiscountAmount } = calculateCartTotal();
         const paid = parseInt(paidInput.value, 10);
-        if(isNaN(paid) || paid < total) return;
+        if(isNaN(paid) || paid < finalTotal) return;
         
         closeModal();
         
@@ -2207,8 +2326,9 @@ function bindPaymentForm(){
             headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},
             body:JSON.stringify({
                 items:CART,
-                total,
+                total: finalTotal,
                 paid,
+                global_discount_amount: globalDiscountAmount,
                 payment_method: paymentMethodValue,
                 cashier: CURRENT_EMPLOYEE ? CURRENT_EMPLOYEE.name : 'Kasir',
                 outlet: (CURRENT_EMPLOYEE && CURRENT_EMPLOYEE.outlet) ? CURRENT_EMPLOYEE.outlet.name : 'Outlet Pusat',
@@ -2375,6 +2495,7 @@ async function checkSession() {
         document.getElementById('pos-app-shell').classList.remove('hidden');
         applyEmployeeRBAC();
         await loadOutlets();
+        await loadGlobalDiscount();
         
         const access = (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase();
         if (access === 'admin') {
@@ -2471,6 +2592,7 @@ window.addEventListener('DOMContentLoaded', () => {
     bindOutletForm();
     bindPaymentForm();
     bindChangePinForm();
+    bindGlobalDiscountForm();
     loadOutlets();
     
     // Bind login form

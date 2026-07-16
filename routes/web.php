@@ -41,6 +41,9 @@ Route::prefix('pos/api')->middleware('employee.auth')->group(function(){
     Route::put('employees/{employee}', [PosController::class, 'updateEmployee'])->middleware('employee.auth:admin');
     Route::delete('employees/{employee}', [PosController::class, 'deleteEmployee'])->middleware('employee.auth:admin');
 
+    Route::get('discount-rule', [PosController::class, 'getDiscountRule']);
+    Route::post('discount-rule', [PosController::class, 'saveDiscountRule'])->middleware('employee.auth:admin');
+
     Route::get('customers', [PosController::class, 'customers']);
     Route::post('customers', [PosController::class, 'storeCustomer']);
 

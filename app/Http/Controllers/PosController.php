@@ -249,6 +249,27 @@ class PosController extends Controller
         return response()->noContent();
     }
 
+    public function getDiscountRule()
+    {
+        return \App\Models\DiscountRule::first() ?: response()->json(null);
+    }
+
+    public function saveDiscountRule(Request $r)
+    {
+        $data = $r->validate([
+            'min_purchase' => 'required|integer|min:0',
+            'discount_percent' => 'required|integer|min:0|max:100',
+        ]);
+
+        $rule = \App\Models\DiscountRule::first();
+        if ($rule) {
+            $rule->update($data);
+        } else {
+            $rule = \App\Models\DiscountRule::create($data);
+        }
+        return $rule;
+    }
+
     public function customers()
     {
         return Customer::withSum(['transactions' => function ($query) {
@@ -325,7 +346,8 @@ class PosController extends Controller
             'draft_id' => 'nullable|integer|exists:pos_transactions,id',
             'cashier' => 'nullable|string',
             'outlet' => 'nullable|string',
-            'customer_id' => 'nullable|integer|exists:customers,id'
+            'customer_id' => 'nullable|integer|exists:customers,id',
+            'global_discount_amount' => 'nullable|integer|min:0'
         ]);
 
         $employee = null;
@@ -346,6 +368,7 @@ class PosController extends Controller
                 'cashier' => $cashierName,
                 'outlet' => $outletName,
                 'customer_id' => $data['customer_id'] ?? null,
+                'global_discount_amount' => $data['global_discount_amount'] ?? 0,
             ]);
             $trx->items()->delete();
         } else {
@@ -359,6 +382,7 @@ class PosController extends Controller
                 'outlet' => $outletName,
                 'is_draft' => true,
                 'customer_id' => $data['customer_id'] ?? null,
+                'global_discount_amount' => $data['global_discount_amount'] ?? 0,
             ]);
         }
 
@@ -387,6 +411,7 @@ class PosController extends Controller
             'outlet' => 'nullable|string',
             'draft_id' => 'nullable|integer|exists:pos_transactions,id',
             'customer_id' => 'nullable|integer|exists:customers,id',
+            'global_discount_amount' => 'nullable|integer|min:0',
         ]);
 
         $employee = null;
@@ -408,6 +433,7 @@ class PosController extends Controller
                 'outlet' => $outletName,
                 'is_draft' => false,
                 'customer_id' => $data['customer_id'] ?? null,
+                'global_discount_amount' => $data['global_discount_amount'] ?? 0,
             ]);
             $trx->items()->delete();
         } else {
@@ -421,6 +447,7 @@ class PosController extends Controller
                 'outlet' => $outletName,
                 'is_draft' => false,
                 'customer_id' => $data['customer_id'] ?? null,
+                'global_discount_amount' => $data['global_discount_amount'] ?? 0,
             ]);
         }
 
