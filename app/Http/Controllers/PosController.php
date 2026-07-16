@@ -45,7 +45,8 @@ class PosController extends Controller
                     return [
                         'outlet_id' => $o->id,
                         'outlet_name' => $o->name,
-                        'stock' => $o->pivot->stock
+                        'stock' => $o->pivot->stock,
+                        'discount' => $o->pivot->discount
                     ];
                 });
                 $product->stock = $product->outlets->sum('pivot.stock');
@@ -54,9 +55,11 @@ class PosController extends Controller
                 if ($outletId) {
                     $pivot = $product->outlets->firstWhere('id', $outletId);
                     $product->stock = $pivot ? $pivot->pivot->stock : 0;
+                    $product->discount = $pivot ? $pivot->pivot->discount : 0;
                     $product->outlet_id = $outletId;
                 } else {
                     $product->stock = 0;
+                    $product->discount = 0;
                     $product->outlet_id = null;
                 }
             }
@@ -85,7 +88,10 @@ class PosController extends Controller
         if (is_array($outletStocks)) {
             $syncData = [];
             foreach ($outletStocks as $os) {
-                $syncData[$os['outlet_id']] = ['stock' => $os['stock']];
+                $syncData[$os['outlet_id']] = [
+                    'stock' => $os['stock'],
+                    'discount' => $os['discount'] ?? 0
+                ];
             }
             $product->outlets()->sync($syncData);
         }
@@ -116,7 +122,10 @@ class PosController extends Controller
         if (is_array($outletStocks)) {
             $syncData = [];
             foreach ($outletStocks as $os) {
-                $syncData[$os['outlet_id']] = ['stock' => $os['stock']];
+                $syncData[$os['outlet_id']] = [
+                    'stock' => $os['stock'],
+                    'discount' => $os['discount'] ?? 0
+                ];
             }
             $product->outlets()->sync($syncData);
         }

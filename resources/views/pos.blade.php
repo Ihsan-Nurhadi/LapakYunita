@@ -746,7 +746,14 @@ function renderTransaction(){
                     </div>
                     <div>
                         <h3>${p.name}</h3>
-                        <div style="color:#64748b; margin-top:6px;">${formatRupiah(p.price)}</div>
+                        <div style="margin-top:6px;">
+                            ${p.discount && p.discount > 0 
+                                ? `<span style="color:#ef4444; text-decoration:line-through; font-size:0.85rem; margin-right:4px;">${formatRupiah(p.price)}</span>
+                                   <span style="color:#10b981; font-weight:700;">${formatRupiah(p.price - (p.price * p.discount / 100))}</span>
+                                   <span style="background:#fef2f2; color:#ef4444; font-size:0.7rem; padding:2px 6px; border-radius:4px; font-weight:bold; margin-left:4px;">Diskon ${p.discount}%</span>`
+                                : `<span style="color:#64748b;">${formatRupiah(p.price)}</span>`
+                            }
+                        </div>
                     </div>
                     <div class="stats">
                         <div class="stat"><span>Harga Modal</span><strong>${formatRupiah(p.modal || 0)}</strong></div>
@@ -953,8 +960,9 @@ function addToCart(id){
     const product = PRODUCTS.find(item => item.id === id);
     if(!product) return;
     const existing = CART.find(item => item.id === id);
+    const effectivePrice = product.discount ? (product.price - (product.price * product.discount / 100)) : product.price;
     if(existing) existing.qty += 1;
-    else CART.push({...product, qty:1});
+    else CART.push({...product, qty:1, price: effectivePrice});
     updateCartUI();
 }
 
@@ -1399,10 +1407,10 @@ function renderReports(){
             </div>
             <div style="display:grid;grid-template-columns:1fr;gap:18px;">
                 <div class="report-card">
-                    <div class="section-title">Total Keuntungan</div>
+                    <div class="section-title">Total Laba</div>
                     <div class="report-row"><div class="report-label">Total Penjualan</div><div class="report-value" id="profit-sales">Rp 0</div></div>
                     <div class="report-row"><div class="report-label">Harga Modal</div><div class="report-value" id="cost-price">Rp 0</div></div>
-                    <div class="report-row"><div class="report-label">Total Keuntungan</div><div class="report-value" id="profit-value">Rp 0</div></div>
+                    <div class="report-row"><div class="report-label">Total Laba</div><div class="report-value" id="profit-value">Rp 0</div></div>
                     <div class="note-text">*Biaya operasional belum termasuk dalam perhitungan ini.</div>
                 </div>
             </div>
@@ -1733,7 +1741,7 @@ function exportReportToPdf() {
                 <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right;">${formatRupiah(costPrice)}</td>
             </tr>
             <tr>
-                <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold; background: #f8fafc;">Total Keuntungan</td>
+                <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold; background: #f8fafc;">Total Laba</td>
                 <td style="padding: 8px; border: 1px solid #cbd5e1; text-align: right; font-weight: bold; color: #2563eb;">${formatRupiah(profit)}</td>
             </tr>
             <tr>
@@ -1921,14 +1929,18 @@ function openAddProduct(){
                 <input type="checkbox" class="outlet-checkbox" data-outlet-id="${out.id}" onchange="toggleOutletStockInput(this)" style="width:auto; margin:0;" />
                 <span style="font-weight: 500;">${out.name}</span>
             </label>
-            <div class="stock-inputs-row hidden" id="stock-inputs-${out.id}" style="display:flex; align-items:center; gap:8px; width:200px;">
+            <div class="stock-inputs-row hidden" id="stock-inputs-${out.id}" style="display:flex; align-items:center; gap:8px; width:260px;">
                 <div style="flex:1;">
                     <span style="font-size:0.7rem; color:#64748b; display:block; font-weight:600;">Stok</span>
-                    <input type="number" class="outlet-current-stock" disabled style="background:#cbd5e1; cursor:not-allowed; padding:6px 10px; margin:4px 0 0; font-size:0.9rem;" value="0" />
+                    <input type="number" class="outlet-current-stock" disabled style="background:#cbd5e1; cursor:not-allowed; padding:6px 10px; margin:4px 0 0; font-size:0.9rem; width:100%;" value="0" />
                 </div>
                 <div style="flex:1;">
                     <span style="font-size:0.7rem; color:#64748b; display:block; font-weight:600;">Tambah</span>
-                    <input type="number" class="outlet-add-stock" style="padding:6px 10px; margin:4px 0 0; font-size:0.9rem; border:1px solid #cbd5e1; border-radius:8px;" value="0" placeholder="0" />
+                    <input type="number" class="outlet-add-stock" style="padding:6px 10px; margin:4px 0 0; font-size:0.9rem; border:1px solid #cbd5e1; border-radius:8px; width:100%;" value="0" placeholder="0" />
+                </div>
+                <div style="flex:1;">
+                    <span style="font-size:0.7rem; color:#64748b; display:block; font-weight:600;">Diskon (%)</span>
+                    <input type="number" class="outlet-discount" min="0" max="100" style="padding:6px 10px; margin:4px 0 0; font-size:0.9rem; border:1px solid #cbd5e1; border-radius:8px; width:100%;" value="0" placeholder="0" />
                 </div>
             </div>
         </div>
@@ -1964,14 +1976,18 @@ function openEditProduct(productId){
                     <input type="checkbox" class="outlet-checkbox" data-outlet-id="${out.id}" onchange="toggleOutletStockInput(this)" ${isChecked ? 'checked' : ''} style="width:auto; margin:0;" />
                     <span style="font-weight: 500;">${out.name}</span>
                 </label>
-                <div class="stock-inputs-row ${isChecked ? '' : 'hidden'}" id="stock-inputs-${out.id}" style="display:flex; align-items:center; gap:8px; width:200px;">
+                <div class="stock-inputs-row ${isChecked ? '' : 'hidden'}" id="stock-inputs-${out.id}" style="display:flex; align-items:center; gap:8px; width:260px;">
                     <div style="flex:1;">
                         <span style="font-size:0.7rem; color:#64748b; display:block; font-weight:600;">Stok</span>
-                        <input type="number" class="outlet-current-stock" disabled style="background:#cbd5e1; cursor:not-allowed; padding:6px 10px; margin:4px 0 0; font-size:0.9rem;" value="${currentStockVal}" />
+                        <input type="number" class="outlet-current-stock" disabled style="background:#cbd5e1; cursor:not-allowed; padding:6px 10px; margin:4px 0 0; font-size:0.9rem; width:100%;" value="${currentStockVal}" />
                     </div>
                     <div style="flex:1;">
                         <span style="font-size:0.7rem; color:#64748b; display:block; font-weight:600;">Tambah</span>
-                        <input type="number" class="outlet-add-stock" style="padding:6px 10px; margin:4px 0 0; font-size:0.9rem; border:1px solid #cbd5e1; border-radius:8px;" value="0" placeholder="0" />
+                        <input type="number" class="outlet-add-stock" style="padding:6px 10px; margin:4px 0 0; font-size:0.9rem; border:1px solid #cbd5e1; border-radius:8px; width:100%;" value="0" placeholder="0" />
+                    </div>
+                    <div style="flex:1;">
+                        <span style="font-size:0.7rem; color:#64748b; display:block; font-weight:600;">Diskon (%)</span>
+                        <input type="number" class="outlet-discount" min="0" max="100" style="padding:6px 10px; margin:4px 0 0; font-size:0.9rem; border:1px solid #cbd5e1; border-radius:8px; width:100%;" value="${productStockInfo ? (productStockInfo.discount || 0) : 0}" placeholder="0" />
                     </div>
                 </div>
             </div>
@@ -1998,9 +2014,11 @@ function bindProductForm(){
             const outletId = cb.dataset.outletId;
             const currentStock = parseInt(cb.closest('.outlet-stock-row').querySelector('.outlet-current-stock').value, 10) || 0;
             const addStock = parseInt(cb.closest('.outlet-stock-row').querySelector('.outlet-add-stock').value, 10) || 0;
+            const discount = parseInt(cb.closest('.outlet-stock-row').querySelector('.outlet-discount').value, 10) || 0;
             outletStocks.push({
                 outlet_id: parseInt(outletId, 10),
-                stock: currentStock + addStock
+                stock: currentStock + addStock,
+                discount: discount
             });
         });
         formData.append('outlet_stocks', JSON.stringify(outletStocks));
