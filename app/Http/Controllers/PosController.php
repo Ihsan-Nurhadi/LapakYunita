@@ -242,7 +242,13 @@ class PosController extends Controller
 
     public function customers()
     {
-        return Customer::orderBy('name')->get();
+        return Customer::withSum(['transactions' => function ($query) {
+            $query->where('is_draft', false);
+        }], 'total')
+        ->withCount(['transactions' => function ($query) {
+            $query->where('is_draft', false);
+        }])
+        ->orderBy('name')->get();
     }
 
     public function storeCustomer(Request $r)
@@ -256,7 +262,7 @@ class PosController extends Controller
     }
     public function transactions()
     {
-        $query = PosTransaction::with('items')->where('is_draft', false);
+        $query = PosTransaction::with(['items', 'customer'])->where('is_draft', false);
         
         $employeeId = session('employee_id');
         if ($employeeId) {
@@ -275,7 +281,7 @@ class PosController extends Controller
 
     public function drafts()
     {
-        $query = PosTransaction::with('items')->where('is_draft', true);
+        $query = PosTransaction::with(['items', 'customer'])->where('is_draft', true);
         $employeeId = session('employee_id');
         if ($employeeId) {
             $employee = Employee::with('outlet')->find($employeeId);
@@ -434,7 +440,7 @@ class PosController extends Controller
             }
         }
 
-        return $trx->load('items');
+        return $trx->load('items', 'customer');
     }
 
     public function login(Request $request)

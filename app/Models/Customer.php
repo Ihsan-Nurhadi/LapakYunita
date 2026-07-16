@@ -10,4 +10,9 @@ class Customer extends Model
     use HasFactory;
     
     protected $fillable = ['name', 'phone', 'address'];
+
+    public function transactions()
+    {
+        return $this->hasMany(PosTransaction::class, 'customer_id');
+    }
 }

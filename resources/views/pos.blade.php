@@ -237,6 +237,7 @@
             <button class="menu-item" id="menu-draft" data-page="draft">📝 Draft</button>
             <button class="menu-item" id="menu-produk" data-page="produk">📦 Produk</button>
             <button class="menu-item" id="menu-pegawai" data-page="pegawai">👥 Pegawai</button>
+            <button class="menu-item" id="menu-pelanggan" data-page="pelanggan">⭐ Pelanggan</button>
             <button class="menu-item" id="menu-outlet" data-page="outlet">🏪 Outlet</button>
             <button class="menu-item" id="menu-laporan" data-page="laporan">📊 Laporan</button>
         </nav>
@@ -301,7 +302,7 @@
     <div class="modal-pane" onclick="event.stopPropagation()" style="max-width: 400px; font-family: monospace;">
         <div id="invoice-print-area">
             <div style="text-align: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; font-size: 1.3rem; font-weight: 800;" id="invoice-outlet-name">Lapak Yunita</h3>
+                <h3 style="margin: 0; font-size: 1.3rem; font-weight: 800;" id="invoice-outlet-name">Lapaknita</h3>
                 <p style="margin: 4px 0; color: #475569; font-size: 0.9rem;" id="invoice-outlet-address">Outlet Pusat</p>
                 <div style="border-top: 1px dashed #cbd5e1; margin-top: 10px;"></div>
             </div>
@@ -318,6 +319,10 @@
                 <tr>
                     <td style="color: #64748b; padding: 2px 0;">Kasir:</td>
                     <td style="text-align: right;" id="invoice-cashier">-</td>
+                </tr>
+                <tr id="invoice-customer-row" class="hidden">
+                    <td style="color: #64748b; padding: 2px 0;">Pelanggan:</td>
+                    <td style="text-align: right;" id="invoice-customer">-</td>
                 </tr>
             </table>
 
@@ -346,7 +351,7 @@
 
             <div style="border-top: 1px dashed #cbd5e1; margin-top: 15px; padding-top: 10px; text-align: center;">
                 <p style="margin: 0; color: #64748b; font-size: 0.85rem;">Terima Kasih atas Kunjungan Anda</p>
-                <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.75rem;">LapakYunita POS</p>
+                <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.75rem;">Lapaknita POS</p>
             </div>
         </div>
 
@@ -382,7 +387,7 @@
             </div>
 
             <div id="qr-payment-details" class="hidden" style="margin-top: -8px; margin-bottom: 16px; text-align: center; background: #f0fdf4; padding: 16px; border-radius: 16px; border: 1px solid rgba(22,163,74,.15);">
-                <p style="margin: 0 0 10px; color: #166534; font-weight: bold; font-size: 0.95rem;">Scan QRIS LapakYunita:</p>
+                <p style="margin: 0 0 10px; color: #166534; font-weight: bold; font-size: 0.95rem;">Scan QRIS Lapaknita:</p>
                 <img src="/qris_payment.png" alt="QRIS Payment" style="width: 200px; height: 200px; object-fit: cover; border-radius: 12px; border: 2px solid #16a34a; box-shadow: 0 10px 25px rgba(22,163,74,0.15);" />
             </div>
 
@@ -392,19 +397,19 @@
                     <div style="border-bottom: 1px dashed rgba(37,99,235,0.15); padding-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <strong>BCA</strong>: <span style="font-family: monospace; font-size: 1rem; font-weight: 700;">8877-6655-44</span><br/>
-                            <span style="color:#64748b; font-size:0.8rem;">a/n Lapak Yunita</span>
+                            <span style="color:#64748b; font-size:0.8rem;">a/n Lapaknita</span>
                         </div>
                     </div>
                     <div style="border-bottom: 1px dashed rgba(37,99,235,0.15); padding-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <strong>Mandiri</strong>: <span style="font-family: monospace; font-size: 1rem; font-weight: 700;">123-00-998877-6</span><br/>
-                            <span style="color:#64748b; font-size:0.8rem;">a/n Lapak Yunita</span>
+                            <span style="color:#64748b; font-size:0.8rem;">a/n Lapaknita</span>
                         </div>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <strong>BRI</strong>: <span style="font-family: monospace; font-size: 1rem; font-weight: 700;">0012-01-998877-50-3</span><br/>
-                            <span style="color:#64748b; font-size:0.8rem;">a/n Lapak Yunita</span>
+                            <span style="color:#64748b; font-size:0.8rem;">a/n Lapaknita</span>
                         </div>
                     </div>
                 </div>
@@ -516,6 +521,16 @@
             <input id="search-pegawai" placeholder="Cari nama pegawai, role, email, atau outlet..." />
         </div>
         <div id="employees-admin" class="card-grid"></div>
+    </div>
+</template>
+
+<template id="tpl-pelanggan">
+    <div>
+        <div class="search-box" style="margin-bottom: 18px;">
+            <span>🔍</span>
+            <input id="search-pelanggan" placeholder="Cari nama, no telp, atau alamat..." />
+        </div>
+        <div id="customers-admin" class="card-grid"></div>
     </div>
 </template>
 
@@ -699,6 +714,9 @@ function showPage(page){
     } else if(page === 'pegawai') {
         setPageHeader('Pegawai', 'Lihat daftar pegawai dan outlet yang mereka kelola.', '+ Tambah Pegawai', true, openAddEmployee);
         renderEmployees();
+    } else if(page === 'pelanggan') {
+        setPageHeader('Pelanggan', 'Kelola daftar pelanggan dan lihat total belanjanya.', '+ Tambah Pelanggan', true, openCustomerModal);
+        renderCustomersPage();
     } else if(page === 'outlet') {
         setPageHeader('Outlet', 'Lihat daftar outlet, alamat, dan kontak.', '+ Tambah Outlet', true, openAddOutlet);
         renderOutlets();
@@ -912,6 +930,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const newCustomer = await res.json();
                 
                 await loadCustomers();
+                if (document.getElementById('customers-admin')) {
+                    renderCustomersPage();
+                }
                 CURRENT_CUSTOMER_ID = newCustomer.id;
                 const select = document.getElementById('cart-customer-select');
                 if (select) select.value = CURRENT_CUSTOMER_ID;
@@ -1095,6 +1116,49 @@ function renderEmployees(){
                 (emp.role || '').toLowerCase().includes(q) || 
                 (emp.email || '').toLowerCase().includes(q) ||
                 (emp.outlet?.name || '').toLowerCase().includes(q)
+            );
+            renderList(filtered);
+        });
+    });
+}
+
+function renderCustomersPage(){
+    document.getElementById('page-content').innerHTML = document.getElementById('tpl-pelanggan').innerHTML;
+    fetch('/pos/api/customers').then(r => r.json()).then(data => {
+        CUSTOMERS = data;
+        const container = document.getElementById('customers-admin');
+        const renderList = list => {
+            container.innerHTML = list.length ? list.map(cust => `
+                <article class="product-card user-card" style="display:flex; flex-direction:column; min-height:240px;">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                        <div><div style="width:48px;height:48px;border-radius:18px;background:#fef3c7;display:grid;place-items:center;color:#d97706;font-size:1.5rem;">⭐</div></div>
+                        <div>
+                            <h3>${cust.name}</h3>
+                            <div class="meta">${cust.phone || 'Tidak ada no telp'}</div>
+                        </div>
+                    </div>
+                    <div class="meta" style="flex:1;">Alamat: ${cust.address || '-'}</div>
+                    <div style="margin-top: 12px; font-size: 0.9rem; border-top: 1px dashed rgba(0,0,0,0.05); padding-top: 12px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 4px;">
+                            <span style="color:#64748b;">Total Transaksi:</span>
+                            <strong>${cust.transactions_count || 0}x</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="color:#64748b;">Total Belanja:</span>
+                            <strong style="color:#10b981;">${formatRupiah(cust.transactions_sum_total || 0)}</strong>
+                        </div>
+                    </div>
+                </article>
+            `).join('') : '<div class="empty-state">Belum ada data pelanggan.</div>';
+        };
+        renderList(CUSTOMERS);
+
+        document.getElementById('search-pelanggan').addEventListener('input', e => {
+            const q = e.target.value.toLowerCase();
+            const filtered = CUSTOMERS.filter(c => 
+                c.name.toLowerCase().includes(q) || 
+                (c.phone || '').toLowerCase().includes(q) || 
+                (c.address || '').toLowerCase().includes(q)
             );
             renderList(filtered);
         });
@@ -1652,7 +1716,7 @@ function exportReportToPdf() {
     printDiv.innerHTML = `
         <div style="text-align: center; margin-bottom: 25px;">
             <h2 style="margin: 0; font-size: 1.8rem;">LAPORAN TRANSAKSI PENJUALAN</h2>
-            <h3 style="margin: 5px 0; color: #475569;">Lapak Yunita POS</h3>
+            <h3 style="margin: 5px 0; color: #475569;">Lapaknita POS</h3>
             ${outletText}
             <p style="margin: 5px 0; font-size: 0.95rem;">Periode: ${startVal || '-'} s/d ${endVal || '-'}</p>
             <p style="margin: 5px 0; font-size: 0.95rem;">Filter Pembayaran: ${filterText}</p>
@@ -1966,7 +2030,16 @@ function showInvoice(tx){
     document.getElementById('invoice-date').innerText = tx.created_at ? new Date(tx.created_at).toLocaleString('id-ID') : new Date().toLocaleString('id-ID');
     document.getElementById('invoice-cashier').innerText = tx.cashier || 'Kasir';
     
-    const outletName = tx.outlet || 'Lapak Yunita';
+    const customerRow = document.getElementById('invoice-customer-row');
+    const customerEl = document.getElementById('invoice-customer');
+    if (tx.customer) {
+        customerEl.innerText = tx.customer.name;
+        customerRow.classList.remove('hidden');
+    } else {
+        customerRow.classList.add('hidden');
+    }
+    
+    const outletName = tx.outlet || 'Lapaknita';
     document.getElementById('invoice-outlet-name').innerText = outletName;
     
     const outletInfo = Array.isArray(OUTLETS) ? OUTLETS.find(o => o.name === outletName) : null;
@@ -2342,14 +2415,16 @@ function applyEmployeeRBAC() {
     const menuDraft = document.getElementById('menu-draft');
     const menuProduk = document.getElementById('menu-produk');
     const menuPegawai = document.getElementById('menu-pegawai');
+    const menuPelanggan = document.getElementById('menu-pelanggan');
     const menuOutlet = document.getElementById('menu-outlet');
     const menuLaporan = document.getElementById('menu-laporan');
     
     if (access === 'admin') {
         menuTransaksi.classList.add('hidden');
-        menuDraft.classList.remove('hidden');
+        menuDraft.classList.add('hidden');
         menuProduk.classList.remove('hidden');
         menuPegawai.classList.remove('hidden');
+        menuPelanggan.classList.remove('hidden');
         menuOutlet.classList.remove('hidden');
         menuLaporan.classList.remove('hidden');
     } else if (access === 'supervisor') {
@@ -2357,6 +2432,7 @@ function applyEmployeeRBAC() {
         menuDraft.classList.remove('hidden');
         menuProduk.classList.add('hidden');
         menuPegawai.classList.add('hidden');
+        menuPelanggan.classList.add('hidden');
         menuOutlet.classList.add('hidden');
         menuLaporan.classList.remove('hidden');
     } else {
@@ -2364,6 +2440,7 @@ function applyEmployeeRBAC() {
         menuDraft.classList.remove('hidden');
         menuProduk.classList.add('hidden');
         menuPegawai.classList.add('hidden');
+        menuPelanggan.classList.add('hidden');
         menuOutlet.classList.add('hidden');
         menuLaporan.classList.add('hidden');
     }
