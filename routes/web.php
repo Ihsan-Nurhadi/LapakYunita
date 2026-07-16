@@ -41,11 +41,17 @@ Route::prefix('pos/api')->middleware('employee.auth')->group(function(){
     Route::put('employees/{employee}', [PosController::class, 'updateEmployee'])->middleware('employee.auth:admin');
     Route::delete('employees/{employee}', [PosController::class, 'deleteEmployee'])->middleware('employee.auth:admin');
 
+    Route::get('customers', [PosController::class, 'customers']);
+    Route::post('customers', [PosController::class, 'storeCustomer']);
+
     Route::get('outlets', [PosController::class, 'outlets']);
     Route::post('outlets', [PosController::class, 'storeOutlet'])->middleware('employee.auth:admin');
     Route::put('outlets/{outlet}', [PosController::class, 'updateOutlet'])->middleware('employee.auth:admin');
     Route::delete('outlets/{outlet}', [PosController::class, 'deleteOutlet'])->middleware('employee.auth:admin');
 
+    Route::get('drafts', [PosController::class, 'drafts']);
+    Route::post('drafts', [PosController::class, 'storeDraft']);
+    Route::delete('drafts/{draft}', [PosController::class, 'deleteDraft']);
     Route::get('transactions', [PosController::class, 'transactions']);
     Route::post('transactions', [PosController::class, 'storeTransaction']);
 });

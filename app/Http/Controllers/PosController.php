@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\Outlet;
 use App\Models\PosTransaction;
 use App\Models\TransactionItem;
+use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -239,9 +240,23 @@ class PosController extends Controller
         return response()->noContent();
     }
 
+    public function customers()
+    {
+        return Customer::orderBy('name')->get();
+    }
+
+    public function storeCustomer(Request $r)
+    {
+        $data = $r->validate([
+            'name' => 'required|string',
+            'phone' => 'nullable|string',
+            'address' => 'nullable|string',
+        ]);
+        return Customer::create($data);
+    }
     public function transactions()
     {
-        $query = PosTransaction::with('items');
+        $query = PosTransaction::with('items')->where('is_draft', false);
         
         $employeeId = session('employee_id');
         if ($employeeId) {
@@ -250,7 +265,7 @@ class PosController extends Controller
                 if ($employee->outlet) {
                     $query->where('outlet', $employee->outlet->name);
                 } else {
-                    $query->where('outlet', '');
+                    $query->where('outlet', 'Outlet Pusat');
                 }
             }
         }
@@ -258,15 +273,44 @@ class PosController extends Controller
         return $query->orderByDesc('id')->get();
     }
 
-    public function storeTransaction(Request $r)
+    public function drafts()
+    {
+        $query = PosTransaction::with('items')->where('is_draft', true);
+        $employeeId = session('employee_id');
+        if ($employeeId) {
+            $employee = Employee::with('outlet')->find($employeeId);
+            if ($employee && strtolower($employee->access ?: $employee->role) !== 'admin') {
+                if ($employee->outlet) {
+                    $query->where('outlet', $employee->outlet->name);
+                } else {
+                    $query->where('outlet', 'Outlet Pusat');
+                }
+            }
+        }
+        return $query->orderByDesc('id')->get();
+    }
+
+    public function deleteDraft(PosTransaction $draft)
+    {
+        if (!$draft->is_draft) {
+            return response()->json(['message' => 'Hanya draft yang dapat dihapus.'], 422);
+        }
+
+        $draft->items()->delete();
+        $draft->delete();
+
+        return response()->noContent();
+    }
+
+    public function storeDraft(Request $r)
     {
         $data = $r->validate([
             'items' => 'required|array',
             'total' => 'required|integer',
-            'paid' => 'required|integer',
-            'payment_method' => 'required|string|in:cash,qr,tf,offline_cash,offline_qr,online_qr,offline_tf,online_tf',
+            'draft_id' => 'nullable|integer|exists:pos_transactions,id',
             'cashier' => 'nullable|string',
-            'outlet' => 'nullable|string'
+            'outlet' => 'nullable|string',
+            'customer_id' => 'nullable|integer|exists:customers,id'
         ]);
 
         $employee = null;
@@ -277,15 +321,93 @@ class PosController extends Controller
         $cashierName = $employee ? $employee->name : ($data['cashier'] ?? 'Kasir');
         $outletName = ($employee && $employee->outlet) ? $employee->outlet->name : ($data['outlet'] ?? 'Outlet Pusat');
 
-        $trx = PosTransaction::create([
-            'trx_id' => 'TRX'.substr((string)time(), -6).mt_rand(100,999),
-            'total' => $data['total'],
-            'paid' => $data['paid'],
-            'change' => max(0, $data['paid'] - $data['total']),
-            'payment_method' => $data['payment_method'],
-            'cashier' => $cashierName,
-            'outlet' => $outletName,
+        if (!empty($data['draft_id'])) {
+            $trx = PosTransaction::where('id', $data['draft_id'])->where('is_draft', true)->firstOrFail();
+            $trx->update([
+                'total' => $data['total'],
+                'paid' => 0,
+                'change' => 0,
+                'payment_method' => 'draft',
+                'cashier' => $cashierName,
+                'outlet' => $outletName,
+                'customer_id' => $data['customer_id'] ?? null,
+            ]);
+            $trx->items()->delete();
+        } else {
+            $trx = PosTransaction::create([
+                'trx_id' => 'DRAFT'.substr((string)time(), -6).mt_rand(100,999),
+                'total' => $data['total'],
+                'paid' => 0,
+                'change' => 0,
+                'payment_method' => 'draft',
+                'cashier' => $cashierName,
+                'outlet' => $outletName,
+                'is_draft' => true,
+                'customer_id' => $data['customer_id'] ?? null,
+            ]);
+        }
+
+        foreach ($data['items'] as $it) {
+            $product = Product::find($it['id']);
+            TransactionItem::create([
+                'transaction_id' => $trx->id,
+                'product_id' => $product?->id,
+                'name' => $it['name'] ?? ($product?->name ?? 'Item'),
+                'qty' => $it['qty'] ?? 1,
+                'price' => $it['price'] ?? 0,
+            ]);
+        }
+
+        return $trx->load('items');
+    }
+
+    public function storeTransaction(Request $r)
+    {
+        $data = $r->validate([
+            'items' => 'required|array',
+            'total' => 'required|integer',
+            'paid' => 'required|integer',
+            'payment_method' => 'required|string|in:cash,qr,tf,offline_cash,offline_qr,online_qr,offline_tf,online_tf',
+            'cashier' => 'nullable|string',
+            'outlet' => 'nullable|string',
+            'draft_id' => 'nullable|integer|exists:pos_transactions,id',
+            'customer_id' => 'nullable|integer|exists:customers,id',
         ]);
+
+        $employee = null;
+        if (session('employee_id')) {
+            $employee = Employee::with('outlet')->find(session('employee_id'));
+        }
+
+        $cashierName = $employee ? $employee->name : ($data['cashier'] ?? 'Kasir');
+        $outletName = ($employee && $employee->outlet) ? $employee->outlet->name : ($data['outlet'] ?? 'Outlet Pusat');
+
+        if (!empty($data['draft_id'])) {
+            $trx = PosTransaction::where('id', $data['draft_id'])->where('is_draft', true)->firstOrFail();
+            $trx->update([
+                'total' => $data['total'],
+                'paid' => $data['paid'],
+                'change' => max(0, $data['paid'] - $data['total']),
+                'payment_method' => $data['payment_method'],
+                'cashier' => $cashierName,
+                'outlet' => $outletName,
+                'is_draft' => false,
+                'customer_id' => $data['customer_id'] ?? null,
+            ]);
+            $trx->items()->delete();
+        } else {
+            $trx = PosTransaction::create([
+                'trx_id' => 'TRX'.substr((string)time(), -6).mt_rand(100,999),
+                'total' => $data['total'],
+                'paid' => $data['paid'],
+                'change' => max(0, $data['paid'] - $data['total']),
+                'payment_method' => $data['payment_method'],
+                'cashier' => $cashierName,
+                'outlet' => $outletName,
+                'is_draft' => false,
+                'customer_id' => $data['customer_id'] ?? null,
+            ]);
+        }
 
         $outlet = null;
         if ($employee && $employee->outlet_id) {

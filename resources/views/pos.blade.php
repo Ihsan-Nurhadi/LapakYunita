@@ -25,7 +25,6 @@
     .product-card { background:#fff; border-radius:24px; border:1px solid rgba(15,23,42,.06); padding:18px; display:flex; flex-direction:column; gap:16px; min-height:260px; }
     .product-card .top { display:flex; justify-content:space-between; gap:14px; }
     .product-card .icon { width:56px; height:56px; border-radius:18px; display:grid; place-items:center; font-size:1.25rem; background:#ecfdf5; color:#16a34a; }
-    .product-card .meta { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .product-card .tag { background:#eef6ff; color:#2563eb; border-radius:999px; padding:.45rem .85rem; font-size:.82rem; font-weight:700; }
     .product-card h3 { margin:0; font-size:1.05rem; }
     .product-card .stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
@@ -34,6 +33,9 @@
     .product-card .stat strong { display:block; margin-top:8px; font-size:1rem; }
     .product-card .actions { display:flex; gap:10px; flex-wrap:wrap; }
     .product-card .actions button { flex:1 1 120px; border:1px solid transparent; border-radius:16px; padding:10px 12px; font-weight:700; cursor:pointer; }
+    .outlet-stock-list { display:flex; flex-direction:column; gap:6px; margin-top: 8px; }
+    .outlet-stock-item { display:inline-flex; align-items:center; gap:8px; background:#f8fafc; border-radius:16px; padding:8px 12px; color:#0f172a; font-size:.9rem; }
+    .outlet-stock-item strong { font-weight:700; }
     .btn-edit { background:#ecfdf5; color:#166534; border-color:#d1fae5; }
     .btn-delete { background:#fef2f2; color:#991b1b; border-color:#fecaca; }
     .btn-add { background:#eff6ff; color:#1d4ed8; border-color:#dbeafe; }
@@ -178,7 +180,7 @@
 <!-- Login Screen Overlay -->
 <div id="login-screen" class="modal-backdrop hidden" style="backdrop-filter: blur(12px); background: rgba(15,23,42,0.6);">
     <div class="modal-pane" style="max-width: 400px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
-        <div style="font-size: 3rem; margin-bottom: 8px;">🛒</div>
+        <img src="{{ asset('logo-lapaknita.jpeg') }}" alt="Logo" style="width: 120px; height: 120px; margin-bottom: 8px; border-radius: 50%;">
         <h3 style="margin: 0 0 4px; font-size: 1.6rem; font-weight: 800; color: #0f172a;">KasirPOS</h3>
         <p style="margin: 0 0 24px; color: #64748b; font-size: 0.95rem;">Pilih nama Anda dan masukkan PIN untuk mulai</p>
         
@@ -231,7 +233,8 @@
         </div>
 
         <nav>
-            <button class="menu-item active" id="menu-transaksi" data-page="transaksi">🛒 Transaksi</button>
+            <button class="menu-item active" id="menu-transaksi" data-page="transaksi"><img src="{{ asset('logo-lapaknita.jpeg') }}" style="width: 18px; height: 18px; vertical-align: middle; border-radius: 50%; margin-right: 4px;"> Transaksi</button>
+            <button class="menu-item" id="menu-draft" data-page="draft">📝 Draft</button>
             <button class="menu-item" id="menu-produk" data-page="produk">📦 Produk</button>
             <button class="menu-item" id="menu-pegawai" data-page="pegawai">👥 Pegawai</button>
             <button class="menu-item" id="menu-outlet" data-page="outlet">🏪 Outlet</button>
@@ -424,6 +427,31 @@
 </div>
 
 <template id="tpl-transaksi">
+    <!-- Customer Modal -->
+    <div id="customer-modal" class="modal-backdrop hidden">
+        <div class="modal-pane">
+            <h2 id="customer-modal-title" style="margin-top:0; color:#0f172a; margin-bottom: 24px;">Tambah Customer</h2>
+            <form id="customer-form">
+                <div style="margin-bottom: 16px;">
+                    <label style="display:block; margin-bottom:8px; font-weight:600; color:#475569;">Nama Customer <span style="color:#ef4444">*</span></label>
+                    <input type="text" id="customer-name" required style="width:100%; border:1px solid rgba(15,23,42,.1); border-radius:12px; padding:12px; font-size:1rem; outline:none;">
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display:block; margin-bottom:8px; font-weight:600; color:#475569;">No Telp</label>
+                    <input type="text" id="customer-phone" style="width:100%; border:1px solid rgba(15,23,42,.1); border-radius:12px; padding:12px; font-size:1rem; outline:none;">
+                </div>
+                <div style="margin-bottom: 24px;">
+                    <label style="display:block; margin-bottom:8px; font-weight:600; color:#475569;">Alamat</label>
+                    <textarea id="customer-address" style="width:100%; border:1px solid rgba(15,23,42,.1); border-radius:12px; padding:12px; font-size:1rem; outline:none; resize:vertical; min-height:80px;"></textarea>
+                </div>
+                <div style="display:flex; gap:12px; justify-content:flex-end;">
+                    <button type="button" class="secondary-btn" onclick="closeCustomerModal()">Batal</button>
+                    <button type="submit" class="primary-btn" id="customer-submit-btn">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="grid">
         <div>
             <div class="search-box">
@@ -435,13 +463,39 @@
         </div>
         <aside class="cart-panel">
             <h3>Keranjang</h3>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:0.85rem; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Customer (Opsional)</label>
+                <div style="display:flex; gap:8px;">
+                    <select id="cart-customer-select" style="flex:1; border:1px solid #cbd5e1; border-radius:8px; padding:8px; font-size:0.9rem; outline:none;" onchange="CURRENT_CUSTOMER_ID = this.value || null;">
+                        <option value="">-- Pilih Customer --</option>
+                    </select>
+                    <button type="button" class="secondary-btn" style="padding:8px 12px; font-size:0.9rem;" onclick="openCustomerModal()">+ Baru</button>
+                </div>
+            </div>
             <div id="cart-items"></div>
             <div class="cart-summary">
                 <div class="row"><span>Items</span><strong id="cart-count">0</strong></div>
                 <div class="row total"><span>Total</span><strong id="cart-total">Rp 0</strong></div>
             </div>
-            <button id="pay-btn" class="primary-btn">Bayar Sekarang</button>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 14px;">
+                <button id="pay-btn" class="primary-btn" style="flex:1;">Bayar Sekarang</button>
+                <button id="save-draft-btn" class="secondary-btn" style="flex:1;">Simpan Draft</button>
+            </div>
+            <div style="margin-top:18px;">
+                <div style="font-weight:700; margin-bottom:10px; color:#0f172a;">Draft Transaksi</div>
+                <div id="draft-list" style="display:grid; gap:10px;"></div>
+            </div>
         </aside>
+    </div>
+</template>
+
+<template id="tpl-drafts">
+    <div>
+        <div class="search-box" style="margin-bottom: 18px;">
+            <span>🔍</span>
+            <input id="search-draft" placeholder="Cari draft..." />
+        </div>
+        <div id="draft-list" style="display:grid; gap:14px;"></div>
     </div>
 </template>
 
@@ -593,10 +647,13 @@ let PRODUCTS = [];
 let EMPLOYEES = [];
 let CART = [];
 let OUTLETS = [];
+let CUSTOMERS = [];
 let editingProduct = null;
 let editingEmployee = null;
 let editingOutlet = null;
 let CURRENT_EMPLOYEE = null;
+let CURRENT_DRAFT_ID = null;
+let CURRENT_CUSTOMER_ID = null;
 let pinBuffer = '';
 
 function setActiveMenu(page) {
@@ -645,6 +702,9 @@ function showPage(page){
     } else if(page === 'outlet') {
         setPageHeader('Outlet', 'Lihat daftar outlet, alamat, dan kontak.', '+ Tambah Outlet', true, openAddOutlet);
         renderOutlets();
+    } else if(page === 'draft') {
+        setPageHeader('Draft Transaksi', 'Lihat dan buka draft transaksi yang tersimpan.', '', false);
+        renderDraftPage();
     } else if(page === 'laporan') {
         setPageHeader('Laporan', 'Ringkasan penjualan dan laba saat ini.', '', false);
         renderReports();
@@ -687,7 +747,186 @@ function renderTransaction(){
         });
     });
     updateCartUI();
+    loadDrafts();
+    loadCustomers();
+    const saveDraftBtn = document.getElementById('save-draft-btn');
+    if (saveDraftBtn) saveDraftBtn.onclick = saveDraft;
 }
+
+function renderDraftPage(){
+    document.getElementById('page-content').innerHTML = document.getElementById('tpl-drafts').innerHTML;
+    loadDrafts();
+    const search = document.getElementById('search-draft');
+    if (search) {
+        search.addEventListener('input', e => {
+            const q = e.target.value.toLowerCase();
+            const filtered = DRAFTS.filter(draft => {
+                const draftLabel = (draft.trx_id || 'Draft').toLowerCase();
+                const draftTotal = formatRupiah(draft.total).toLowerCase();
+                const draftDate = new Date(draft.created_at).toLocaleString('id-ID').toLowerCase();
+                return draftLabel.includes(q) || draftTotal.includes(q) || draftDate.includes(q);
+            });
+            renderDraftList(filtered);
+        });
+    }
+}
+
+function saveDraft(){
+    if (!CART.length) {
+        return showAlert('Keranjang kosong. Tambahkan produk sebelum menyimpan draft.', 'Peringatan', '⚠️');
+    }
+
+    const total = CART.reduce((sum, item) => sum + item.qty * item.price, 0);
+
+    fetch('/pos/api/drafts', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            items: CART,
+            total,
+            draft_id: CURRENT_DRAFT_ID || null,
+            cashier: CURRENT_EMPLOYEE ? CURRENT_EMPLOYEE.name : 'Kasir',
+            outlet: (CURRENT_EMPLOYEE && CURRENT_EMPLOYEE.outlet) ? CURRENT_EMPLOYEE.outlet.name : 'Outlet Pusat',
+            customer_id: CURRENT_CUSTOMER_ID || null
+        })
+    })
+    .then(async res => {
+        if (!res.ok) throw new Error('Gagal menyimpan draft');
+        const data = await res.json();
+        CURRENT_DRAFT_ID = data.id;
+        showAlert('Draft berhasil disimpan.', 'Draft Disimpan', '✅');
+        loadDrafts();
+    })
+    .catch(() => showAlert('Gagal menyimpan draft. Coba ulang.', 'Error', '❌'));
+}
+
+async function loadDrafts(){
+    try {
+        const res = await fetch('/pos/api/drafts');
+        if (!res.ok) throw new Error('Gagal memuat draft');
+        const data = await res.json();
+        DRAFTS = Array.isArray(data) ? data : [];
+        renderDraftList();
+    } catch (e) {
+        DRAFTS = [];
+        renderDraftList();
+    }
+}
+
+function renderDraftList(filteredDrafts = DRAFTS){
+    const listContainer = document.getElementById('draft-list');
+    if (!listContainer) return;
+
+    if (!filteredDrafts.length) {
+        listContainer.innerHTML = '<div style="color:#64748b; font-size:.95rem;">Belum ada draft tersimpan.</div>';
+        return;
+    }
+
+    listContainer.innerHTML = filteredDrafts.map(draft => {
+        const date = new Date(draft.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return `
+            <button type="button" class="secondary-btn" style="display:flex; justify-content:space-between; width:100%; text-align:left; padding:12px 14px;" onclick="openDraft(${draft.id})">
+                <span>${draft.trx_id || 'Draft'} • ${draft.items.length} item</span>
+                <span style="font-weight:700;">${formatRupiah(draft.total)}</span>
+            </button>
+            <div style="font-size:.82rem; color:#64748b; margin-bottom: 8px;">${date}</div>
+        `;
+    }).join('');
+}
+
+function openDraft(id){
+    const draft = DRAFTS.find(item => item.id === id);
+    if (!draft) {
+        return showAlert('Draft tidak ditemukan.', 'Error', '❌');
+    }
+    CURRENT_DRAFT_ID = draft.id;
+    CURRENT_CUSTOMER_ID = draft.customer_id || null;
+    const customerSelect = document.getElementById('cart-customer-select');
+    if (customerSelect) customerSelect.value = CURRENT_CUSTOMER_ID || "";
+
+    CART = draft.items.map(item => ({
+        id: item.product_id || 0,
+        name: item.name,
+        qty: item.qty,
+        price: item.price
+    }));
+    updateCartUI();
+    if (document.getElementById('menu-transaksi')) document.getElementById('menu-transaksi').click();
+}
+
+async function loadCustomers() {
+    try {
+        const res = await fetch('/pos/api/customers');
+        const data = await res.json();
+        CUSTOMERS = Array.isArray(data) ? data : [];
+        const select = document.getElementById('cart-customer-select');
+        if (select) {
+            select.innerHTML = '<option value="">-- Pilih Customer --</option>' + 
+                CUSTOMERS.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            select.value = CURRENT_CUSTOMER_ID || "";
+        }
+    } catch (e) {
+        console.error("Gagal load customer", e);
+    }
+}
+
+function openCustomerModal() {
+    document.getElementById('customer-modal').classList.remove('hidden');
+    document.getElementById('customer-name').value = '';
+    document.getElementById('customer-phone').value = '';
+    document.getElementById('customer-address').value = '';
+    document.getElementById('customer-name').focus();
+}
+
+function closeCustomerModal() {
+    document.getElementById('customer-modal').classList.add('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.body.addEventListener('submit', async (e) => {
+        if (e.target && e.target.id === 'customer-form') {
+            e.preventDefault();
+            const btn = document.getElementById('customer-submit-btn');
+            btn.disabled = true;
+            btn.innerText = 'Menyimpan...';
+
+            const payload = {
+                name: document.getElementById('customer-name').value,
+                phone: document.getElementById('customer-phone').value,
+                address: document.getElementById('customer-address').value
+            };
+
+            try {
+                const res = await fetch('/pos/api/customers', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('Gagal menambah customer');
+                const newCustomer = await res.json();
+                
+                await loadCustomers();
+                CURRENT_CUSTOMER_ID = newCustomer.id;
+                const select = document.getElementById('cart-customer-select');
+                if (select) select.value = CURRENT_CUSTOMER_ID;
+                
+                closeCustomerModal();
+                showAlert('Customer berhasil ditambahkan', 'Sukses', '✅');
+            } catch (error) {
+                showAlert('Gagal menambah customer', 'Error', '❌');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Simpan';
+            }
+        }
+    });
+});
 
 function addToCart(id){
     const product = PRODUCTS.find(item => item.id === id);
@@ -794,9 +1033,13 @@ function renderProductsAdmin(){
                         <div class="stats" style="grid-template-columns: repeat(2, 1fr); margin-top:8px;">
                             <div class="stat"><span>Harga Modal</span><strong>${formatRupiah(p.modal || 0)}</strong></div>
                             <div class="stat"><span>Total Stok</span><strong>${p.stock ?? 0}</strong></div>
+                            <div class="stat"><span>ID</span><strong>${p.id}</strong></div>
                         </div>
-                        <div style="margin-top: 8px; font-size: 0.85rem; color: #475569; display: flex; flex-wrap: wrap; gap: 6px; border-top: 1px dashed rgba(0,0,0,0.05); padding-top: 8px;">
-                            <strong>Cabang & Stok:</strong> ${outletsHtml}
+                        <div style="margin-top: 8px; font-size: 0.85rem; color: #475569; border-top: 1px dashed rgba(0,0,0,0.05); padding-top: 8px;">
+                            <div style="font-weight:700; margin-bottom: 8px;">Cabang & Stok:</div>
+                            <div class="outlet-stock-list">
+                                ${outletsHtml}
+                            </div>
                         </div>
                         <div class="actions" style="margin-top:auto; padding-top:12px;">
                             <button type="button" class="btn-edit" onclick="openEditProduct(${p.id})">Edit</button>
@@ -1877,13 +2120,19 @@ function bindPaymentForm(){
                 paid,
                 payment_method: paymentMethodValue,
                 cashier: CURRENT_EMPLOYEE ? CURRENT_EMPLOYEE.name : 'Kasir',
-                outlet: (CURRENT_EMPLOYEE && CURRENT_EMPLOYEE.outlet) ? CURRENT_EMPLOYEE.outlet.name : 'Outlet Pusat'
+                outlet: (CURRENT_EMPLOYEE && CURRENT_EMPLOYEE.outlet) ? CURRENT_EMPLOYEE.outlet.name : 'Outlet Pusat',
+                draft_id: CURRENT_DRAFT_ID || null,
+                customer_id: CURRENT_CUSTOMER_ID || null
             })
         });
         if(response.ok){
             const txData = await response.json();
             showAlert('Transaksi berhasil!', 'Berhasil', '✅', () => {
                 CART = [];
+                CURRENT_DRAFT_ID = null;
+                CURRENT_CUSTOMER_ID = null;
+                const custSelect = document.getElementById('cart-customer-select');
+                if (custSelect) custSelect.value = '';
                 renderTransaction();
                 showInvoice(txData);
             });
@@ -2090,6 +2339,7 @@ function applyEmployeeRBAC() {
     }
     
     const menuTransaksi = document.getElementById('menu-transaksi');
+    const menuDraft = document.getElementById('menu-draft');
     const menuProduk = document.getElementById('menu-produk');
     const menuPegawai = document.getElementById('menu-pegawai');
     const menuOutlet = document.getElementById('menu-outlet');
@@ -2097,18 +2347,21 @@ function applyEmployeeRBAC() {
     
     if (access === 'admin') {
         menuTransaksi.classList.add('hidden');
+        menuDraft.classList.remove('hidden');
         menuProduk.classList.remove('hidden');
         menuPegawai.classList.remove('hidden');
         menuOutlet.classList.remove('hidden');
         menuLaporan.classList.remove('hidden');
     } else if (access === 'supervisor') {
         menuTransaksi.classList.remove('hidden');
+        menuDraft.classList.remove('hidden');
         menuProduk.classList.add('hidden');
         menuPegawai.classList.add('hidden');
         menuOutlet.classList.add('hidden');
         menuLaporan.classList.remove('hidden');
     } else {
         menuTransaksi.classList.remove('hidden');
+        menuDraft.classList.remove('hidden');
         menuProduk.classList.add('hidden');
         menuPegawai.classList.add('hidden');
         menuOutlet.classList.add('hidden');
