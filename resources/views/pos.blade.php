@@ -172,6 +172,20 @@
             padding: 0 !important;
             background: transparent !important;
         }
+        .tier-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            vertical-align: middle;
+            margin-left: 6px;
+        }
+        .tier-badge.Silver { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+        .tier-badge.Gold { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+        .tier-badge.Platinum { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
     }
     </style>
     @endpush
@@ -1214,7 +1228,7 @@ function renderCustomersPage(){
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
                         <div><div style="width:48px;height:48px;border-radius:18px;background:#fef3c7;display:grid;place-items:center;color:#d97706;font-size:1.5rem;">⭐</div></div>
                         <div>
-                            <h3>${cust.name}</h3>
+                            <h3>${cust.name} <span class="tier-badge ${cust.tier || 'Silver'}">${cust.badge || '🥈'} ${cust.tier || 'Silver'}</span></h3>
                             <div class="meta">${cust.phone || 'Tidak ada no telp'}</div>
                         </div>
                     </div>
