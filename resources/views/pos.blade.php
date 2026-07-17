@@ -512,7 +512,7 @@
         <aside class="cart-panel">
             <h3>Keranjang</h3>
             <div style="margin-bottom:12px;">
-                <label style="font-size:0.85rem; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Customer (Opsional)</label>
+                <label style="font-size:0.85rem; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Customer (Wajib)</label>
                 <div style="display:flex; gap:8px;">
                     <select id="cart-customer-select" style="flex:1; border:1px solid #cbd5e1; border-radius:8px; padding:8px; font-size:0.9rem; outline:none;" onchange="CURRENT_CUSTOMER_ID = this.value || null;">
                         <option value="">-- Pilih Customer --</option>
@@ -865,6 +865,9 @@ function saveDraft(){
     if (!CART.length) {
         return showAlert('Keranjang kosong. Tambahkan produk sebelum menyimpan draft.', 'Peringatan', '⚠️');
     }
+    if (!CURRENT_CUSTOMER_ID) {
+        return showAlert('Silakan pilih pelanggan (Customer) terlebih dahulu.', 'Pilih Pelanggan', '👤');
+    }
 
     const { finalTotal, globalDiscountAmount } = calculateCartTotal();
 
@@ -887,9 +890,15 @@ function saveDraft(){
     .then(async res => {
         if (!res.ok) throw new Error('Gagal menyimpan draft');
         const data = await res.json();
-        CURRENT_DRAFT_ID = data.id;
-        showAlert('Draft berhasil disimpan.', 'Draft Disimpan', '✅');
-        loadDrafts();
+        showAlert('Draft berhasil disimpan.', 'Draft Disimpan', '✅', () => {
+            CART = [];
+            CURRENT_DRAFT_ID = null;
+            CURRENT_CUSTOMER_ID = null;
+            const custSelect = document.getElementById('cart-customer-select');
+            if (custSelect) custSelect.value = '';
+            updateCartUI();
+            loadDrafts();
+        });
     })
     .catch(() => showAlert('Gagal menyimpan draft. Coba ulang.', 'Error', '❌'));
 }
@@ -1098,6 +1107,7 @@ function updateCartUI(){
 
 function processPayment(){
     if(!CART.length) return showAlert('Silakan tambahkan produk ke keranjang terlebih dahulu.', 'Keranjang Kosong', '🛒');
+    if(!CURRENT_CUSTOMER_ID) return showAlert('Silakan pilih pelanggan (Customer) terlebih dahulu.', 'Pilih Pelanggan', '👤');
     const { finalTotal } = calculateCartTotal();
     
     document.getElementById('payment-total-label').innerText = formatRupiah(finalTotal);

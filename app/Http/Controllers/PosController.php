@@ -346,7 +346,7 @@ class PosController extends Controller
             'draft_id' => 'nullable|integer|exists:pos_transactions,id',
             'cashier' => 'nullable|string',
             'outlet' => 'nullable|string',
-            'customer_id' => 'nullable|integer|exists:customers,id',
+            'customer_id' => 'required|integer|exists:customers,id',
             'global_discount_amount' => 'nullable|integer|min:0'
         ]);
 
@@ -410,7 +410,7 @@ class PosController extends Controller
             'cashier' => 'nullable|string',
             'outlet' => 'nullable|string',
             'draft_id' => 'nullable|integer|exists:pos_transactions,id',
-            'customer_id' => 'nullable|integer|exists:customers,id',
+            'customer_id' => 'required|integer|exists:customers,id',
             'global_discount_amount' => 'nullable|integer|min:0',
         ]);
 
