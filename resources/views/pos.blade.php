@@ -1201,7 +1201,7 @@ function renderEmployees(){
                         <div>${renderImageCircle(emp.photo, emp.name, 48) || '<div style="width:48px;height:48px;border-radius:18px;background:#eef2ff;display:grid;place-items:center;color:#4338ca;">👤</div>'}</div>
                         <div>
                             <h3>${emp.name}</h3>
-                            <div class="meta">${emp.role || 'Staff'} • ${emp.email || '-'} • ${emp.phone || '-'}</div>
+                            <div class="meta">ID: ${emp.id} • ${emp.role || 'Staff'} • ${emp.email || '-'} • ${emp.phone || '-'}</div>
                         </div>
                     </div>
                     <div class="meta">Outlet: ${emp.outlet?.name || emp.outlet_id || 'Tidak tersedia'}</div>
@@ -1291,6 +1291,7 @@ function renderOutlets(){
                                 <div class="meta">${out.address || '-'}${out.kelurahan ? ', ' + out.kelurahan : ''}</div>
                             </div>
                         </div>
+                        <div class="meta">ID Outlet: ${out.id}</div>
                         <div class="meta">Telp: ${out.phone || '-'}</div>
                         <div class="meta">Kode Pos: ${out.kode_pos || '-'}</div>
                         <div class="meta" style="margin-top: 8px; border-top: 1px dashed rgba(0,0,0,0.05); padding-top: 8px; font-size: 0.9rem;">
@@ -2192,7 +2193,7 @@ function showInvoice(tx){
     }
     
     const outletName = tx.outlet || 'Lapaknita';
-    document.getElementById('invoice-outlet-name').innerText = outletName;
+    document.getElementById('invoice-outlet-name').innerText = outletName === 'Lapaknita' ? 'Lapaknita' : 'Lapaknita - ' + outletName;
     
     const outletInfo = Array.isArray(OUTLETS) ? OUTLETS.find(o => o.name === outletName) : null;
     const addressEl = document.getElementById('invoice-outlet-address');
