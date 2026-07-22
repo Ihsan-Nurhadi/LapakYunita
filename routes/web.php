@@ -46,6 +46,10 @@ Route::prefix('pos/api')->middleware('employee.auth')->group(function(){
 
     Route::get('customers', [PosController::class, 'customers']);
     Route::post('customers', [PosController::class, 'storeCustomer']);
+    Route::put('customers/{customer}', [PosController::class, 'updateCustomer']);
+    Route::delete('customers/{customer}', [PosController::class, 'destroyCustomer']);
+    Route::get('customer-tiers', [PosController::class, 'customerTiers']);
+    Route::post('customer-tiers', [PosController::class, 'saveCustomerTiers'])->middleware('employee.auth:admin');
 
     Route::get('outlets', [PosController::class, 'outlets']);
     Route::post('outlets', [PosController::class, 'storeOutlet'])->middleware('employee.auth:admin');

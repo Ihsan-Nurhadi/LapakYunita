@@ -249,25 +249,52 @@ class PosController extends Controller
         return response()->noContent();
     }
 
-    public function getDiscountRule()
+    public function getDiscountRule(Request $request)
     {
-        return \App\Models\DiscountRule::first() ?: response()->json(null);
+        $employeeId = session('employee_id');
+        $employee = null;
+        if ($employeeId) {
+            $employee = Employee::find($employeeId);
+        }
+
+        $isAdmin = $employee && strtolower($employee->access ?: $employee->role) === 'admin';
+
+        if ($isAdmin || $request->has('all')) {
+            return \App\Models\DiscountRule::all();
+        }
+
+        if ($employee && $employee->outlet_id) {
+            return \App\Models\DiscountRule::where('outlet_id', $employee->outlet_id)->first() ?: response()->json(null);
+        }
+
+        return \App\Models\DiscountRule::whereNull('outlet_id')->first() ?: \App\Models\DiscountRule::first() ?: response()->json(null);
     }
 
     public function saveDiscountRule(Request $r)
     {
         $data = $r->validate([
-            'min_purchase' => 'required|integer|min:0',
-            'discount_percent' => 'required|integer|min:0|max:100',
+            'rules' => 'required|array',
+            'rules.*.outlet_id' => 'required|integer|exists:outlets,id',
+            'rules.*.min_purchase' => 'required|integer|min:0',
+            'rules.*.discount_percent' => 'required|integer|min:0|max:100',
         ]);
 
-        $rule = \App\Models\DiscountRule::first();
-        if ($rule) {
-            $rule->update($data);
-        } else {
-            $rule = \App\Models\DiscountRule::create($data);
+        $inserted = [];
+        foreach ($data['rules'] as $ruleData) {
+            $rule = \App\Models\DiscountRule::updateOrCreate(
+                ['outlet_id' => $ruleData['outlet_id']],
+                [
+                    'min_purchase' => $ruleData['min_purchase'],
+                    'discount_percent' => $ruleData['discount_percent']
+                ]
+            );
+            $inserted[] = $rule;
         }
-        return $rule;
+
+        $activeOutletIds = collect($data['rules'])->pluck('outlet_id')->all();
+        \App\Models\DiscountRule::whereNotIn('outlet_id', $activeOutletIds)->delete();
+
+        return response()->json($inserted);
     }
 
     public function customers()
@@ -287,8 +314,57 @@ class PosController extends Controller
             'name' => 'required|string',
             'phone' => 'nullable|string',
             'address' => 'nullable|string',
+            'email' => 'nullable|email|unique:customers,email',
+            'dob' => 'nullable|date',
         ]);
         return Customer::create($data);
+    }
+    public function updateCustomer(Request $r, Customer $customer)
+    {
+        $data = $r->validate([
+            'name' => 'required|string',
+            'phone' => 'nullable|string',
+            'address' => 'nullable|string',
+            'email' => 'nullable|email|unique:customers,email,' . $customer->id,
+            'dob' => 'nullable|date',
+        ]);
+        $customer->update($data);
+        return response()->json($customer);
+    }
+    public function destroyCustomer(Customer $customer)
+    {
+        $customer->delete();
+        return response()->json(['message' => 'Customer deleted successfully']);
+    }
+
+    public function customerTiers()
+    {
+        return \App\Models\CustomerTier::orderBy('min_spent')->get();
+    }
+
+    public function saveCustomerTiers(Request $r)
+    {
+        $data = $r->validate([
+            'tiers' => 'required|array',
+            'tiers.*.id' => 'required|integer|exists:customer_tiers,id',
+            'tiers.*.min_spent' => 'required|integer|min:0',
+            'tiers.*.badge' => 'required|string|max:10',
+            'tiers.*.discount_percent' => 'required|integer|min:0|max:100',
+        ]);
+
+        $updated = [];
+        foreach ($data['tiers'] as $tierData) {
+            $tier = \App\Models\CustomerTier::find($tierData['id']);
+            if ($tier) {
+                $tier->update([
+                    'min_spent' => $tierData['min_spent'],
+                    'badge' => $tierData['badge'],
+                    'discount_percent' => $tierData['discount_percent'],
+                ]);
+                $updated[] = $tier;
+            }
+        }
+        return response()->json($updated);
     }
     public function transactions()
     {
@@ -360,7 +436,22 @@ class PosController extends Controller
 
         if (!empty($data['draft_id'])) {
             $trx = PosTransaction::where('id', $data['draft_id'])->where('is_draft', true)->firstOrFail();
+            
+            if ($trx->customer_id == $data['customer_id']) {
+                $trxId = $trx->trx_id;
+            } else {
+                $customer = \App\Models\Customer::find($data['customer_id']);
+                $custName = $customer ? strtoupper(str_replace(' ', '', $customer->name)) : 'ANONIM';
+                $attempts = 0;
+                do {
+                    $trxId = 'DRAFT' . $custName . ($attempts > 0 ? '-' . mt_rand(100, 999) : '');
+                    $exists = \App\Models\PosTransaction::where('trx_id', $trxId)->where('id', '!=', $trx->id)->exists();
+                    $attempts++;
+                } while ($exists && $attempts < 10);
+            }
+
             $trx->update([
+                'trx_id' => $trxId,
                 'total' => $data['total'],
                 'paid' => 0,
                 'change' => 0,
@@ -372,8 +463,17 @@ class PosController extends Controller
             ]);
             $trx->items()->delete();
         } else {
+            $customer = \App\Models\Customer::find($data['customer_id']);
+            $custName = $customer ? strtoupper(str_replace(' ', '', $customer->name)) : 'ANONIM';
+            $attempts = 0;
+            do {
+                $trxId = 'DRAFT' . $custName . ($attempts > 0 ? '-' . mt_rand(100, 999) : '');
+                $exists = \App\Models\PosTransaction::where('trx_id', $trxId)->exists();
+                $attempts++;
+            } while ($exists && $attempts < 10);
+
             $trx = PosTransaction::create([
-                'trx_id' => 'DRAFT'.substr((string)time(), -6).mt_rand(100,999),
+                'trx_id' => $trxId,
                 'total' => $data['total'],
                 'paid' => 0,
                 'change' => 0,

@@ -292,10 +292,10 @@
         <h3>Pengaturan Diskon Keseluruhan</h3>
         <p style="color:#64748b; font-size:0.9rem; margin-top:-8px; margin-bottom:16px;">Tentukan batas minimum pembelian dan persentase diskon yang diberikan.</p>
         <form id="global-discount-form">
-            <label>Batas Minimum Pembelian (Rp)</label>
-            <input type="number" id="global-discount-min" required placeholder="Contoh: 200000" />
-            <label>Jumlah Diskon (%)</label>
-            <input type="number" id="global-discount-percent" required placeholder="Contoh: 5" min="0" max="100" />
+            <label style="font-weight: 600; color: #475569; display: block; margin-bottom: 8px;">Aturan per Cabang / Outlet</label>
+            <div id="global-discount-outlets-container" style="display:flex; flex-direction:column; gap:12px; background:#f8fafc; border:1px solid rgba(15,23,42,.08); border-radius:16px; padding:16px; max-height:260px; overflow-y:auto; margin-bottom: 20px;">
+                <!-- Dinamis diisi lewat JavaScript -->
+            </div>
             
             <div class="modal-actions">
                 <button type="button" class="secondary-btn" onclick="closeModal()">Batal</button>
@@ -358,6 +358,10 @@
                 <tr id="invoice-customer-row" class="hidden">
                     <td style="color: #64748b; padding: 2px 0;">Pelanggan:</td>
                     <td style="text-align: right;" id="invoice-customer">-</td>
+                </tr>
+                <tr id="invoice-customer-tier-row" class="hidden">
+                    <td style="color: #64748b; padding: 2px 0;">Kelas:</td>
+                    <td style="text-align: right;" id="invoice-customer-tier">-</td>
                 </tr>
             </table>
 
@@ -475,31 +479,6 @@
 </div>
 
 <template id="tpl-transaksi">
-    <!-- Customer Modal -->
-    <div id="customer-modal" class="modal-backdrop hidden">
-        <div class="modal-pane">
-            <h2 id="customer-modal-title" style="margin-top:0; color:#0f172a; margin-bottom: 24px;">Tambah Customer</h2>
-            <form id="customer-form">
-                <div style="margin-bottom: 16px;">
-                    <label style="display:block; margin-bottom:8px; font-weight:600; color:#475569;">Nama Customer <span style="color:#ef4444">*</span></label>
-                    <input type="text" id="customer-name" required style="width:100%; border:1px solid rgba(15,23,42,.1); border-radius:12px; padding:12px; font-size:1rem; outline:none;">
-                </div>
-                <div style="margin-bottom: 16px;">
-                    <label style="display:block; margin-bottom:8px; font-weight:600; color:#475569;">No Telp</label>
-                    <input type="text" id="customer-phone" style="width:100%; border:1px solid rgba(15,23,42,.1); border-radius:12px; padding:12px; font-size:1rem; outline:none;">
-                </div>
-                <div style="margin-bottom: 24px;">
-                    <label style="display:block; margin-bottom:8px; font-weight:600; color:#475569;">Alamat</label>
-                    <textarea id="customer-address" style="width:100%; border:1px solid rgba(15,23,42,.1); border-radius:12px; padding:12px; font-size:1rem; outline:none; resize:vertical; min-height:80px;"></textarea>
-                </div>
-                <div style="display:flex; gap:12px; justify-content:flex-end;">
-                    <button type="button" class="secondary-btn" onclick="closeCustomerModal()">Batal</button>
-                    <button type="submit" class="primary-btn" id="customer-submit-btn">Simpan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <div class="grid">
         <div>
             <div class="search-box">
@@ -523,6 +502,7 @@
             <div id="cart-items"></div>
             <div class="cart-summary">
                 <div class="row"><span>Items</span><strong id="cart-count">0</strong></div>
+                <div id="cart-discounts-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
                 <div class="row total"><span>Total</span><strong id="cart-total">Rp 0</strong></div>
             </div>
             <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 14px;">
@@ -676,6 +656,57 @@
     </div>
 </div>
 
+<!-- Customer Modal -->
+<div id="customer-modal" class="modal-backdrop hidden" onclick="closeCustomerModal(event)">
+    <div class="modal-pane" onclick="event.stopPropagation()">
+        <h2 id="customer-modal-title" style="margin-top:0; color:#0f172a; margin-bottom: 24px;">Tambah Customer</h2>
+        <form id="customer-form">
+            <div style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom:8px; font-weight:600; color:#475569;">Nama Customer <span style="color:#ef4444">*</span></label>
+                <input type="text" id="customer-name" required style="width:100%; border:1px solid rgba(15,23,42,.1); border-radius:12px; padding:12px; font-size:1rem; outline:none;">
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom:8px; font-weight:600; color:#475569;">No Telp</label>
+                <input type="text" id="customer-phone" style="width:100%; border:1px solid rgba(15,23,42,.1); border-radius:12px; padding:12px; font-size:1rem; outline:none;">
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom:8px; font-weight:600; color:#475569;">Email</label>
+                <input type="email" id="customer-email" style="width:100%; border:1px solid rgba(15,23,42,.1); border-radius:12px; padding:12px; font-size:1rem; outline:none;">
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom:8px; font-weight:600; color:#475569;">Tanggal Lahir</label>
+                <input type="date" id="customer-dob" style="width:100%; border:1px solid rgba(15,23,42,.1); border-radius:12px; padding:12px; font-size:1rem; outline:none;">
+            </div>
+            <div style="margin-bottom: 24px;">
+                <label style="display:block; margin-bottom:8px; font-weight:600; color:#475569;">Alamat</label>
+                <textarea id="customer-address" style="width:100%; border:1px solid rgba(15,23,42,.1); border-radius:12px; padding:12px; font-size:1rem; outline:none; resize:vertical; min-height:80px;"></textarea>
+            </div>
+            <div style="display:flex; gap:12px; justify-content:flex-end;">
+                <button type="button" class="secondary-btn" onclick="closeCustomerModal()">Batal</button>
+                <button type="submit" class="primary-btn" id="customer-submit-btn">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Badge Modal -->
+<div id="badge-modal" class="modal-backdrop hidden" onclick="closeModal(event)">
+    <div class="modal-pane" onclick="event.stopPropagation()" style="max-width: 520px;">
+        <h3>Pengaturan Badge & Diskon Pelanggan</h3>
+        <p style="color:#64748b; font-size:0.9rem; margin-top:-8px; margin-bottom:16px;">Tentukan minimal pembelian, emoji badge, dan persentase diskon untuk masing-masing tier pelanggan.</p>
+        <form id="badge-form">
+            <div id="badge-tiers-container" style="display:flex; flex-direction:column; gap:16px; margin-bottom: 20px;">
+                <!-- Dinamis diisi lewat JavaScript -->
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="secondary-btn" onclick="closeModal()">Batal</button>
+                <button type="submit" class="primary-btn">Simpan Badge</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 const formatRupiah = n => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 const categoryIcon = cat => {
@@ -706,9 +737,11 @@ let EMPLOYEES = [];
 let CART = [];
 let OUTLETS = [];
 let CUSTOMERS = [];
+let CUSTOMER_TIERS = [];
 let editingProduct = null;
 let editingEmployee = null;
 let editingOutlet = null;
+let editingCustomer = null;
 let CURRENT_EMPLOYEE = null;
 let CURRENT_DRAFT_ID = null;
 let CURRENT_CUSTOMER_ID = null;
@@ -721,7 +754,7 @@ function setActiveMenu(page) {
     });
 }
 
-function setPageHeader(title, subtitle, actionLabel = '+ Tambah Produk', showAction = true, actionFn = null, showAction2 = false, action2Fn = null) {
+function setPageHeader(title, subtitle, actionLabel = '+ Tambah Produk', showAction = true, actionFn = null, showAction2 = false, action2Fn = null, action2Label = 'Buat Diskon') {
     document.getElementById('page-title').innerText = title;
     document.getElementById('page-subtitle').innerText = subtitle;
     const actionBtn = document.getElementById('action-button');
@@ -732,6 +765,7 @@ function setPageHeader(title, subtitle, actionLabel = '+ Tambah Produk', showAct
     const actionBtn2 = document.getElementById('action-button-2');
     if (actionBtn2) {
         if (showAction2) {
+            actionBtn2.innerText = action2Label;
             actionBtn2.classList.remove('hidden');
             actionBtn2.onclick = action2Fn || (() => {});
         } else {
@@ -780,7 +814,7 @@ function showPage(page){
         setPageHeader('Pegawai', 'Lihat daftar pegawai dan outlet yang mereka kelola.', '+ Tambah Pegawai', true, openAddEmployee);
         renderEmployees();
     } else if(page === 'pelanggan') {
-        setPageHeader('Pelanggan', 'Kelola daftar pelanggan dan lihat total belanjanya.', '+ Tambah Pelanggan', true, openCustomerModal);
+        setPageHeader('Pelanggan', 'Kelola daftar pelanggan dan lihat total belanjanya.', '+ Tambah Pelanggan', true, openCustomerModal, true, openEditBadgeModal, 'Edit Badge');
         renderCustomersPage();
     } else if(page === 'outlet') {
         setPageHeader('Outlet', 'Lihat daftar outlet, alamat, dan kontak.', '+ Tambah Outlet', true, openAddOutlet);
@@ -854,7 +888,8 @@ function renderDraftPage(){
                 const draftLabel = (draft.trx_id || 'Draft').toLowerCase();
                 const draftTotal = formatRupiah(draft.total).toLowerCase();
                 const draftDate = new Date(draft.created_at).toLocaleString('id-ID').toLowerCase();
-                return draftLabel.includes(q) || draftTotal.includes(q) || draftDate.includes(q);
+                const custName = (draft.customer && draft.customer.name || '').toLowerCase();
+                return draftLabel.includes(q) || draftTotal.includes(q) || draftDate.includes(q) || custName.includes(q);
             });
             renderDraftList(filtered);
         });
@@ -928,13 +963,48 @@ function renderDraftList(filteredDrafts = DRAFTS){
     listContainer.innerHTML = filteredDrafts.map(draft => {
         const date = new Date(draft.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
         return `
-            <button type="button" class="secondary-btn" style="display:flex; justify-content:space-between; width:100%; text-align:left; padding:12px 14px;" onclick="openDraft(${draft.id})">
-                <span>${draft.trx_id || 'Draft'} • ${draft.items.length} item</span>
-                <span style="font-weight:700;">${formatRupiah(draft.total)}</span>
-            </button>
-            <div style="font-size:.82rem; color:#64748b; margin-bottom: 8px;">${date}</div>
+            <div class="draft-card" style="display:flex; align-items:stretch; gap:10px; margin-bottom: 8px;">
+                <button type="button" class="secondary-btn" style="display:flex; justify-content:space-between; align-items:center; flex:1; text-align:left; padding:10px 12px; border-radius:12px;" onclick="openDraft(${draft.id})">
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                        <span style="font-weight:600; font-size:0.95rem;">${draft.trx_id || 'Draft'} • ${draft.items.length} item</span>
+                        <span style="font-size:.76rem; color:#64748b;">${date}</span>
+                    </div>
+                    <span style="font-weight:700; color:#16a34a; font-size:0.95rem;">${formatRupiah(draft.total)}</span>
+                </button>
+                <button type="button" class="secondary-btn btn-delete" style="padding:10px 14px; display:grid; place-items:center; border-radius:12px; font-size:1.1rem; cursor:pointer;" onclick="event.stopPropagation(); deleteDraftConfirm(${draft.id})" title="Hapus Draft">
+                    🗑️
+                </button>
+            </div>
         `;
     }).join('');
+}
+
+function deleteDraftConfirm(id) {
+    if (confirm('Apakah Anda yakin ingin menghapus draft ini?')) {
+        fetch(`/pos/api/drafts/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            }
+        })
+        .then(res => {
+            if (res.ok) {
+                showAlert('Draft berhasil dihapus.', 'Draft Dihapus', '✅');
+                if (CURRENT_DRAFT_ID === id) {
+                    CURRENT_DRAFT_ID = null;
+                    CURRENT_CUSTOMER_ID = null;
+                    CART = [];
+                    const custSelect = document.getElementById('cart-customer-select');
+                    if (custSelect) custSelect.value = '';
+                    updateCartUI();
+                }
+                loadDrafts();
+            } else {
+                showAlert('Gagal menghapus draft.', 'Error', '❌');
+            }
+        })
+        .catch(() => showAlert('Gagal menghapus draft.', 'Error', '❌'));
+    }
 }
 
 function openDraft(id){
@@ -965,7 +1035,7 @@ async function loadCustomers() {
         const select = document.getElementById('cart-customer-select');
         if (select) {
             select.innerHTML = '<option value="">-- Pilih Customer --</option>' + 
-                CUSTOMERS.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                CUSTOMERS.map(c => `<option value="${c.id}">${c.name}${c.phone ? ' (' + c.phone + ')' : ''}</option>`).join('');
             select.value = CURRENT_CUSTOMER_ID || "";
         }
     } catch (e) {
@@ -974,11 +1044,44 @@ async function loadCustomers() {
 }
 
 function openCustomerModal() {
+    editingCustomer = null;
+    document.getElementById('customer-modal-title').innerText = 'Tambah Customer';
     document.getElementById('customer-modal').classList.remove('hidden');
     document.getElementById('customer-name').value = '';
     document.getElementById('customer-phone').value = '';
+    document.getElementById('customer-email').value = '';
+    document.getElementById('customer-dob').value = '';
     document.getElementById('customer-address').value = '';
     document.getElementById('customer-name').focus();
+}
+
+function openEditCustomer(id) {
+    const cust = CUSTOMERS.find(c => c.id === id);
+    if (!cust) return;
+    editingCustomer = cust;
+    document.getElementById('customer-modal-title').innerText = 'Edit Customer';
+    document.getElementById('customer-modal').classList.remove('hidden');
+    document.getElementById('customer-name').value = cust.name || '';
+    document.getElementById('customer-phone').value = cust.phone || '';
+    document.getElementById('customer-email').value = cust.email || '';
+    document.getElementById('customer-dob').value = cust.dob ? cust.dob.split('T')[0] : '';
+    document.getElementById('customer-address').value = cust.address || '';
+    document.getElementById('customer-name').focus();
+}
+
+function deleteCustomer(id) {
+    if(!confirm('Hapus pelanggan ini?')) return;
+    fetch(`/pos/api/customers/${id}`, {
+        method: 'DELETE',
+        headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'}
+    }).then(async res => {
+        if(res.ok) {
+            await loadCustomers();
+            if(document.getElementById('customers-admin')) renderCustomersPage();
+        } else {
+            showAlert('Gagal menghapus pelanggan.', 'Error', '❌');
+        }
+    });
 }
 
 function closeCustomerModal() {
@@ -996,33 +1099,45 @@ document.addEventListener('DOMContentLoaded', () => {
             const payload = {
                 name: document.getElementById('customer-name').value,
                 phone: document.getElementById('customer-phone').value,
+                email: document.getElementById('customer-email').value,
+                dob: document.getElementById('customer-dob').value,
                 address: document.getElementById('customer-address').value
             };
 
             try {
-                const res = await fetch('/pos/api/customers', {
-                    method: 'POST',
+                const url = editingCustomer ? `/pos/api/customers/${editingCustomer.id}` : '/pos/api/customers';
+                const method = editingCustomer ? 'PUT' : 'POST';
+                const res = await fetch(url, {
+                    method: method,
                     headers: { 
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     },
                     body: JSON.stringify(payload)
                 });
-                if (!res.ok) throw new Error('Gagal menambah customer');
+                if (!res.ok) {
+                    let errData;
+                    try { errData = await res.json(); } catch(e) {}
+                    throw new Error((errData && errData.message) ? errData.message : 'Gagal menyimpan customer');
+                }
                 const newCustomer = await res.json();
                 
                 await loadCustomers();
                 if (document.getElementById('customers-admin')) {
                     renderCustomersPage();
                 }
-                CURRENT_CUSTOMER_ID = newCustomer.id;
-                const select = document.getElementById('cart-customer-select');
-                if (select) select.value = CURRENT_CUSTOMER_ID;
+                
+                if (!editingCustomer) {
+                    CURRENT_CUSTOMER_ID = newCustomer.id;
+                    const select = document.getElementById('cart-customer-select');
+                    if (select) select.value = CURRENT_CUSTOMER_ID;
+                }
                 
                 closeCustomerModal();
-                showAlert('Customer berhasil ditambahkan', 'Sukses', '✅');
+                showAlert(editingCustomer ? 'Customer berhasil diperbarui' : 'Customer berhasil ditambahkan', 'Sukses', '✅');
             } catch (error) {
-                showAlert('Gagal menambah customer', 'Error', '❌');
+                showAlert('Gagal menyimpan customer: ' + error.message, 'Error', '❌');
+                console.error(error);
             } finally {
                 btn.disabled = false;
                 btn.innerText = 'Simpan';
@@ -1060,20 +1175,65 @@ function calculateCartTotal() {
     const subtotal = CART.reduce((sum, item) => sum + item.qty * item.price, 0);
     let globalDiscountAmount = 0;
     
-    if (GLOBAL_DISCOUNT_RULE && GLOBAL_DISCOUNT_RULE.min_purchase > 0 && subtotal >= GLOBAL_DISCOUNT_RULE.min_purchase) {
-        globalDiscountAmount = Math.floor(subtotal * (GLOBAL_DISCOUNT_RULE.discount_percent / 100));
+    let activeRule = null;
+    if (GLOBAL_DISCOUNT_RULE) {
+        if (Array.isArray(GLOBAL_DISCOUNT_RULE)) {
+            const outletName = (CURRENT_EMPLOYEE && CURRENT_EMPLOYEE.outlet) ? CURRENT_EMPLOYEE.outlet.name : 'Outlet Pusat';
+            const outletInfo = OUTLETS.find(o => o.name === outletName);
+            if (outletInfo) {
+                activeRule = GLOBAL_DISCOUNT_RULE.find(r => r.outlet_id === outletInfo.id);
+            }
+        } else {
+            activeRule = GLOBAL_DISCOUNT_RULE;
+        }
+    }
+
+    let outletDiscountAmount = 0;
+    let outletDiscountPercent = 0;
+    if (activeRule && activeRule.min_purchase > 0 && subtotal >= activeRule.min_purchase) {
+        outletDiscountPercent = activeRule.discount_percent;
+        outletDiscountAmount = Math.floor(subtotal * (outletDiscountPercent / 100));
+        globalDiscountAmount += outletDiscountAmount;
+    }
+
+    let customerDiscountAmount = 0;
+    let customerDiscountPercent = 0;
+    let customerTierName = '';
+    if (CURRENT_CUSTOMER_ID) {
+        const cust = CUSTOMERS.find(c => c.id == CURRENT_CUSTOMER_ID);
+        if (cust && cust.tier_discount_percent > 0) {
+            customerDiscountPercent = cust.tier_discount_percent;
+            customerTierName = cust.tier || 'Silver';
+            customerDiscountAmount = Math.floor(subtotal * (customerDiscountPercent / 100));
+            globalDiscountAmount += customerDiscountAmount;
+        }
     }
     
     return {
         subtotal,
         globalDiscountAmount,
-        finalTotal: Math.max(0, subtotal - globalDiscountAmount)
+        finalTotal: Math.max(0, subtotal - globalDiscountAmount),
+        outletDiscountAmount,
+        outletDiscountPercent,
+        customerDiscountAmount,
+        customerDiscountPercent,
+        customerTierName
     };
 }
 
 function updateCartUI(){
     const count = CART.reduce((sum, item) => sum + item.qty, 0);
-    const { subtotal, globalDiscountAmount, finalTotal } = calculateCartTotal();
+    const { 
+        subtotal, 
+        globalDiscountAmount, 
+        finalTotal,
+        outletDiscountAmount,
+        outletDiscountPercent,
+        customerDiscountAmount,
+        customerDiscountPercent,
+        customerTierName
+    } = calculateCartTotal();
+    
     const cartCount = document.getElementById('cart-count');
     const cartItems = document.getElementById('cart-items');
     const cartTotal = document.getElementById('cart-total');
@@ -1085,6 +1245,29 @@ function updateCartUI(){
             cartTotal.innerText = formatRupiah(finalTotal);
         }
     }
+    
+    const discountsContainer = document.getElementById('cart-discounts-container');
+    if (discountsContainer) {
+        let html = '';
+        if (outletDiscountAmount > 0) {
+            html += `
+                <div class="row" style="color: #ef4444; font-size: 0.9rem; margin-bottom: 2px;">
+                    <span>Diskon Toko (${outletDiscountPercent}%)</span>
+                    <strong>-${formatRupiah(outletDiscountAmount)}</strong>
+                </div>
+            `;
+        }
+        if (customerDiscountAmount > 0) {
+            html += `
+                <div class="row" style="color: #ef4444; font-size: 0.9rem; margin-bottom: 2px;">
+                    <span>Diskon ${customerTierName} (${customerDiscountPercent}%)</span>
+                    <strong>-${formatRupiah(customerDiscountAmount)}</strong>
+                </div>
+            `;
+        }
+        discountsContainer.innerHTML = html;
+    }
+
     if(cartItems) {
         cartItems.innerHTML = CART.length ? CART.map(item => `
             <div class="cart-item">
@@ -1180,6 +1363,7 @@ function renderProductsAdmin(){
         document.getElementById('search-produk').addEventListener('input', e => {
             const q = e.target.value.toLowerCase();
             const filtered = PRODUCTS.filter(p => 
+                String(p.id).includes(q) ||
                 p.name.toLowerCase().includes(q) || 
                 (p.category || '').toLowerCase().includes(q) ||
                 (Array.isArray(p.stocks) && p.stocks.some(s => s.outlet_name.toLowerCase().includes(q)))
@@ -1217,6 +1401,7 @@ function renderEmployees(){
         document.getElementById('search-pegawai').addEventListener('input', e => {
             const q = e.target.value.toLowerCase();
             const filtered = EMPLOYEES.filter(emp => 
+                String(emp.id).includes(q) ||
                 emp.name.toLowerCase().includes(q) || 
                 (emp.role || '').toLowerCase().includes(q) || 
                 (emp.email || '').toLowerCase().includes(q) ||
@@ -1239,7 +1424,9 @@ function renderCustomersPage(){
                         <div><div style="width:48px;height:48px;border-radius:18px;background:#fef3c7;display:grid;place-items:center;color:#d97706;font-size:1.5rem;">⭐</div></div>
                         <div>
                             <h3>${cust.name} <span class="tier-badge ${cust.tier || 'Silver'}">${cust.badge || '🥈'} ${cust.tier || 'Silver'}</span></h3>
-                            <div class="meta">${cust.phone || 'Tidak ada no telp'}</div>
+                            <div class="meta">ID: ${cust.id} • ${cust.phone || 'Tidak ada no telp'}</div>
+                            <div class="meta" style="margin-top:2px;">Email: ${cust.email || '-'}</div>
+                            <div class="meta" style="margin-top:2px;">Tanggal Lahir: ${cust.dob ? new Date(cust.dob).toLocaleDateString('id-ID') : '-'}</div>
                         </div>
                     </div>
                     <div class="meta" style="flex:1;">Alamat: ${cust.address || '-'}</div>
@@ -1253,6 +1440,10 @@ function renderCustomersPage(){
                             <strong style="color:#10b981;">${formatRupiah(cust.transactions_sum_total || 0)}</strong>
                         </div>
                     </div>
+                    <div class="actions" style="margin-top:auto; padding-top:12px;">
+                        <button type="button" class="btn-edit" onclick="openEditCustomer(${cust.id})">Edit</button>
+                        <button type="button" class="btn-delete" onclick="deleteCustomer(${cust.id})">Hapus</button>
+                    </div>
                 </article>
             `).join('') : '<div class="empty-state">Belum ada data pelanggan.</div>';
         };
@@ -1261,6 +1452,7 @@ function renderCustomersPage(){
         document.getElementById('search-pelanggan').addEventListener('input', e => {
             const q = e.target.value.toLowerCase();
             const filtered = CUSTOMERS.filter(c => 
+                String(c.id).includes(q) ||
                 c.name.toLowerCase().includes(q) || 
                 (c.phone || '').toLowerCase().includes(q) || 
                 (c.address || '').toLowerCase().includes(q)
@@ -1311,6 +1503,7 @@ function renderOutlets(){
         document.getElementById('search-outlet').addEventListener('input', e => {
             const q = e.target.value.toLowerCase();
             const filtered = OUTLETS.filter(out => 
+                String(out.id).includes(q) ||
                 out.name.toLowerCase().includes(q) || 
                 (out.address || '').toLowerCase().includes(q) ||
                 (out.kelurahan || '').toLowerCase().includes(q)
@@ -1908,15 +2101,58 @@ function closeModal(event){
     document.getElementById('payment-modal').classList.add('hidden');
     document.getElementById('change-pin-modal').classList.add('hidden');
     document.getElementById('global-discount-modal').classList.add('hidden');
+    document.getElementById('customer-modal').classList.add('hidden');
+    document.getElementById('badge-modal').classList.add('hidden');
 }
 
-function openGlobalDiscountModal() {
-    if (GLOBAL_DISCOUNT_RULE) {
-        document.getElementById('global-discount-min').value = GLOBAL_DISCOUNT_RULE.min_purchase || '';
-        document.getElementById('global-discount-percent').value = GLOBAL_DISCOUNT_RULE.discount_percent || '';
+function toggleDiscountOutletInput(checkbox) {
+    const outletId = checkbox.dataset.outletId;
+    const inputsRow = document.getElementById(`discount-inputs-${outletId}`);
+    if (checkbox.checked) {
+        inputsRow.classList.remove('hidden');
     } else {
-        document.getElementById('global-discount-min').value = '';
-        document.getElementById('global-discount-percent').value = '';
+        inputsRow.classList.add('hidden');
+    }
+}
+
+async function openGlobalDiscountModal() {
+    try {
+        const res = await fetch('/pos/api/discount-rule?all=1');
+        if (res.ok) {
+            GLOBAL_DISCOUNT_RULE = await res.json();
+        }
+    } catch (e) {
+        console.error("Error loading global discount rules:", e);
+    }
+
+    const container = document.getElementById('global-discount-outlets-container');
+    if (container) {
+        const rules = Array.isArray(GLOBAL_DISCOUNT_RULE) ? GLOBAL_DISCOUNT_RULE : [];
+        container.innerHTML = OUTLETS.map(out => {
+            const ruleInfo = rules.find(r => r.outlet_id === out.id);
+            const isChecked = !!ruleInfo;
+            const minPurchase = ruleInfo ? ruleInfo.min_purchase : 0;
+            const discountPercent = ruleInfo ? ruleInfo.discount_percent : 0;
+
+            return `
+                <div class="discount-outlet-row" style="display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom: 1px solid rgba(0,0,0,0.02); padding-bottom: 8px;">
+                    <label style="margin:0; display:flex; align-items:center; gap:8px; cursor:pointer; flex:1;">
+                        <input type="checkbox" class="discount-outlet-checkbox" data-outlet-id="${out.id}" onchange="toggleDiscountOutletInput(this)" ${isChecked ? 'checked' : ''} style="width:auto; margin:0;" />
+                        <span style="font-weight: 500;">${out.name}</span>
+                    </label>
+                    <div class="discount-inputs-row ${isChecked ? '' : 'hidden'}" id="discount-inputs-${out.id}" style="display:flex; align-items:center; gap:8px; width:260px;">
+                        <div style="flex:1.2;">
+                            <span style="font-size:0.7rem; color:#64748b; display:block; font-weight:600;">Batas Min (Rp)</span>
+                            <input type="number" class="discount-outlet-min" min="0" style="padding:6px 10px; margin:4px 0 0; font-size:0.9rem; border:1px solid #cbd5e1; border-radius:8px; width:100%;" value="${minPurchase}" placeholder="0" />
+                        </div>
+                        <div style="flex:1;">
+                            <span style="font-size:0.7rem; color:#64748b; display:block; font-weight:600;">Diskon (%)</span>
+                            <input type="number" class="discount-outlet-percent" min="0" max="100" style="padding:6px 10px; margin:4px 0 0; font-size:0.9rem; border:1px solid #cbd5e1; border-radius:8px; width:100%;" value="${discountPercent}" placeholder="0" />
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
     document.getElementById('global-discount-modal').classList.remove('hidden');
 }
@@ -1925,10 +2161,20 @@ function bindGlobalDiscountForm() {
     const form = document.getElementById('global-discount-form');
     form.addEventListener('submit', async e => {
         e.preventDefault();
-        const minVal = parseInt(document.getElementById('global-discount-min').value, 10);
-        const pctVal = parseInt(document.getElementById('global-discount-percent').value, 10);
         
-        if (isNaN(minVal) || isNaN(pctVal)) return showAlert('Mohon isi dengan angka yang benar', 'Peringatan', '⚠️');
+        const rules = [];
+        document.querySelectorAll('.discount-outlet-checkbox:checked').forEach(cb => {
+            const outletId = parseInt(cb.dataset.outletId, 10);
+            const row = cb.closest('.discount-outlet-row');
+            const minPurchase = parseInt(row.querySelector('.discount-outlet-min').value, 10) || 0;
+            const discountPercent = parseInt(row.querySelector('.discount-outlet-percent').value, 10) || 0;
+            
+            rules.push({
+                outlet_id: outletId,
+                min_purchase: minPurchase,
+                discount_percent: discountPercent
+            });
+        });
         
         const res = await fetch('/pos/api/discount-rule', {
             method: 'POST',
@@ -1936,7 +2182,7 @@ function bindGlobalDiscountForm() {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
             },
-            body: JSON.stringify({ min_purchase: minVal, discount_percent: pctVal })
+            body: JSON.stringify({ rules: rules })
         });
         
         if (res.ok) {
@@ -1948,6 +2194,88 @@ function bindGlobalDiscountForm() {
             }
         } else {
             showAlert('Gagal menyimpan aturan diskon', 'Error', '❌');
+        }
+    });
+}
+
+async function openEditBadgeModal() {
+    try {
+        const res = await fetch('/pos/api/customer-tiers');
+        if (res.ok) {
+            CUSTOMER_TIERS = await res.json();
+        }
+    } catch (e) {
+        console.error("Error loading customer tiers:", e);
+    }
+
+    const container = document.getElementById('badge-tiers-container');
+    if (container) {
+        container.innerHTML = CUSTOMER_TIERS.map(tier => `
+            <div class="badge-tier-row" data-tier-id="${tier.id}" style="border: 1px solid rgba(15,23,42,.08); padding: 16px; border-radius: 16px; background: #f8fafc;">
+                <div style="font-weight: 700; margin-bottom: 12px; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.25rem;">${tier.badge || '🥈'}</span>
+                    <span>Tier ${tier.name}</span>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <div style="flex: 1.2;">
+                        <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Minimal Belanja (Rp)</label>
+                        <input type="number" class="tier-min-spent" required style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px;" value="${tier.min_spent || 0}" />
+                    </div>
+                    <div style="flex: 0.8;">
+                        <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Emoji Badge</label>
+                        <input type="text" class="tier-badge-input" required maxlength="2" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px; text-align: center;" value="${tier.badge || ''}" />
+                    </div>
+                    <div style="flex: 0.8;">
+                        <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Diskon (%)</label>
+                        <input type="number" class="tier-discount" required min="0" max="100" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px;" value="${tier.discount_percent || 0}" />
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    document.getElementById('badge-modal').classList.remove('hidden');
+}
+
+function bindBadgeForm() {
+    const form = document.getElementById('badge-form');
+    if (!form) return;
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        
+        const tiers = [];
+        document.querySelectorAll('.badge-tier-row').forEach(row => {
+            const tierId = parseInt(row.dataset.tierId, 10);
+            const minSpent = parseInt(row.querySelector('.tier-min-spent').value, 10) || 0;
+            const badge = row.querySelector('.tier-badge-input').value.trim();
+            const discountPercent = parseInt(row.querySelector('.tier-discount').value, 10) || 0;
+            
+            tiers.push({
+                id: tierId,
+                min_spent: minSpent,
+                badge: badge,
+                discount_percent: discountPercent
+            });
+        });
+        
+        const res = await fetch('/pos/api/customer-tiers', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ tiers: tiers })
+        });
+        
+        if (res.ok) {
+            CUSTOMER_TIERS = await res.json();
+            closeModal();
+            showAlert('Aturan badge pelanggan berhasil disimpan', 'Berhasil', '✅');
+            if (document.getElementById('customers-admin')) {
+                renderCustomersPage();
+            }
+        } else {
+            showAlert('Gagal menyimpan aturan badge', 'Error', '❌');
         }
     });
 }
@@ -1975,6 +2303,9 @@ function bindEmployeeForm(){
     const form = document.getElementById('employee-form');
     form.addEventListener('submit', async e => {
         e.preventDefault();
+        const submitBtn = form.querySelector('[type="submit"]');
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Menyimpan...'; }
+
         const formData = new FormData();
         formData.append('name', document.getElementById('employee-name').value.trim());
         formData.append('role', document.getElementById('employee-role').value);
@@ -1992,17 +2323,33 @@ function bindEmployeeForm(){
 
         const url = editingEmployee ? `/pos/api/employees/${editingEmployee.id}` : '/pos/api/employees';
         if (editingEmployee) formData.append('_method', 'PUT');
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: {'X-CSRF-TOKEN':'{{ csrf_token() }}'},
-            body: formData
-        });
-        if(res.ok){
-            closeModal();
-            editingEmployee = null;
-            renderEmployees();
-        } else {
-            showAlert('Gagal menyimpan pegawai. Periksa input Anda.', 'Gagal Menyimpan', '❌');
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {'X-CSRF-TOKEN':'{{ csrf_token() }}'},
+                body: formData
+            });
+            if(res.ok){
+                closeModal();
+                editingEmployee = null;
+                renderEmployees();
+                showAlert('Data pegawai berhasil disimpan.', 'Sukses', '✅');
+            } else {
+                let errMsg = 'Gagal menyimpan pegawai. Periksa input Anda.';
+                try {
+                    const errData = await res.json();
+                    if (errData && errData.message) errMsg = errData.message;
+                    if (errData && errData.errors) {
+                        errMsg = Object.values(errData.errors).flat().join(', ');
+                    }
+                } catch(_) {}
+                showAlert(errMsg, 'Gagal Menyimpan', '❌');
+            }
+        } catch(err) {
+            showAlert('Terjadi kesalahan jaringan: ' + err.message, 'Error', '❌');
+            console.error(err);
+        } finally {
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Simpan Pegawai'; }
         }
     });
 }
@@ -2070,7 +2417,7 @@ function openAddProduct(){
                     <input type="number" class="outlet-current-stock" disabled style="background:#cbd5e1; cursor:not-allowed; padding:6px 10px; margin:4px 0 0; font-size:0.9rem; width:100%;" value="0" />
                 </div>
                 <div style="flex:1;">
-                    <span style="font-size:0.7rem; color:#64748b; display:block; font-weight:600;">Tambah</span>
+                    <span style="font-size:0.7rem; color:#64748b; display:block; font-weight:600;">Tambah Stok</span>
                     <input type="number" class="outlet-add-stock" style="padding:6px 10px; margin:4px 0 0; font-size:0.9rem; border:1px solid #cbd5e1; border-radius:8px; width:100%;" value="0" placeholder="0" />
                 </div>
                 <div style="flex:1;">
@@ -2117,7 +2464,7 @@ function openEditProduct(productId){
                         <input type="number" class="outlet-current-stock" disabled style="background:#cbd5e1; cursor:not-allowed; padding:6px 10px; margin:4px 0 0; font-size:0.9rem; width:100%;" value="${currentStockVal}" />
                     </div>
                     <div style="flex:1;">
-                        <span style="font-size:0.7rem; color:#64748b; display:block; font-weight:600;">Tambah</span>
+                        <span style="font-size:0.7rem; color:#64748b; display:block; font-weight:600;">Tambah Stok</span>
                         <input type="number" class="outlet-add-stock" style="padding:6px 10px; margin:4px 0 0; font-size:0.9rem; border:1px solid #cbd5e1; border-radius:8px; width:100%;" value="0" placeholder="0" />
                     </div>
                     <div style="flex:1;">
@@ -2185,11 +2532,18 @@ function showInvoice(tx){
     
     const customerRow = document.getElementById('invoice-customer-row');
     const customerEl = document.getElementById('invoice-customer');
+    const customerTierRow = document.getElementById('invoice-customer-tier-row');
+    const customerTierEl = document.getElementById('invoice-customer-tier');
     if (tx.customer) {
         customerEl.innerText = tx.customer.name;
         customerRow.classList.remove('hidden');
+        if (customerTierEl && customerTierRow) {
+            customerTierEl.innerText = `${tx.customer.badge || '🥈'} ${tx.customer.tier || 'Silver'}`;
+            customerTierRow.classList.remove('hidden');
+        }
     } else {
         customerRow.classList.add('hidden');
+        if (customerTierRow) customerTierRow.classList.add('hidden');
     }
     
     const outletName = tx.outlet || 'Lapaknita';
@@ -2481,6 +2835,7 @@ async function handleLogin(e) {
         document.getElementById('pos-app-shell').classList.remove('hidden');
         applyEmployeeRBAC();
         await loadOutlets();
+        await loadGlobalDiscount();
         
         const access = (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase();
         if (access === 'admin') {
@@ -2618,6 +2973,7 @@ window.addEventListener('DOMContentLoaded', () => {
     bindPaymentForm();
     bindChangePinForm();
     bindGlobalDiscountForm();
+    bindBadgeForm();
     loadOutlets();
     
     // Bind login form
