@@ -309,6 +309,10 @@
     <div class="modal-pane" onclick="event.stopPropagation()">
         <h3 id="modal-title">Tambah Produk</h3>
         <form id="product-form">
+            <div id="product-id-row" class="hidden" style="margin-bottom:12px;">
+                <label>ID Produk</label>
+                <input type="text" id="field-product-id" disabled style="background:#f1f5f9; color:#64748b; cursor:not-allowed; font-weight:700;" />
+            </div>
             <label>Nama Produk</label>
             <input type="text" name="name" id="field-name" required />
             <label>Kategori</label>
@@ -571,6 +575,10 @@
     <div class="modal-pane" onclick="event.stopPropagation()">
         <h3>Tambah Pegawai</h3>
         <form id="employee-form">
+            <div id="employee-id-row" class="hidden" style="margin-bottom:12px;">
+                <label>ID Pegawai</label>
+                <input type="text" id="field-employee-id" disabled style="background:#f1f5f9; color:#64748b; cursor:not-allowed; font-weight:700;" />
+            </div>
             <label>Nama</label>
             <input type="text" id="employee-name" required />
             <label>Role</label>
@@ -602,6 +610,10 @@
     <div class="modal-pane" onclick="event.stopPropagation()">
         <h3>Tambah Outlet</h3>
         <form id="outlet-form">
+            <div id="outlet-id-row" class="hidden" style="margin-bottom:12px;">
+                <label>ID Outlet</label>
+                <input type="text" id="field-outlet-id" disabled style="background:#f1f5f9; color:#64748b; cursor:not-allowed; font-weight:700;" />
+            </div>
             <label>Nama Outlet</label>
             <input type="text" id="outlet-name" required />
             <label>Telepon</label>
@@ -661,6 +673,10 @@
     <div class="modal-pane" onclick="event.stopPropagation()">
         <h2 id="customer-modal-title" style="margin-top:0; color:#0f172a; margin-bottom: 24px;">Tambah Customer</h2>
         <form id="customer-form">
+            <div id="customer-id-row" class="hidden" style="margin-bottom: 16px;">
+                <label style="display:block; margin-bottom:8px; font-weight:600; color:#475569;">ID Customer</label>
+                <input type="text" id="field-customer-id" disabled style="width:100%; border:1px solid rgba(15,23,42,.1); border-radius:12px; padding:12px; font-size:1rem; outline:none; background:#f1f5f9; color:#64748b; cursor:not-allowed; font-weight:700;">
+            </div>
             <div style="margin-bottom: 16px;">
                 <label style="display:block; margin-bottom:8px; font-weight:600; color:#475569;">Nama Customer <span style="color:#ef4444">*</span></label>
                 <input type="text" id="customer-name" required style="width:100%; border:1px solid rgba(15,23,42,.1); border-radius:12px; padding:12px; font-size:1rem; outline:none;">
@@ -709,6 +725,20 @@
 
 <script>
 const formatRupiah = n => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
+
+function formatCustomId(id, type, extraRole = '') {
+    const padded = String(id || '').padStart(4, '0');
+    if (type === 'product') return padded + 'P';
+    if (type === 'outlet') return padded + 'O';
+    if (type === 'customer') return padded + 'C';
+    if (type === 'employee') {
+        const role = String(extraRole || '').toLowerCase();
+        if (role.includes('admin')) return padded + 'A';
+        if (role.includes('supervisor')) return padded + 'S';
+        return padded + 'K';
+    }
+    return padded;
+}
 const categoryIcon = cat => {
     if(!cat) return '📦';
     const key = cat.toLowerCase();
@@ -808,16 +838,21 @@ function showPage(page){
         setPageHeader('Transaksi', 'Cari produk, tambah ke keranjang, lalu selesaikan pembayaran.', '+ Tambah Produk', false);
         renderTransaction();
     } else if(page === 'produk') {
-        setPageHeader('Kelola Produk', 'Tambahkan, edit, dan hapus produk secara cepat.', '+ Tambah Produk', true, openAddProduct, true, openGlobalDiscountModal);
+        setPageHeader('Kelola Produk', 'Tambahkan, edit, dan hapus produk secara cepat.', '+ Tambah Produk', true, openAddProduct);
         renderProductsAdmin();
     } else if(page === 'pegawai') {
         setPageHeader('Pegawai', 'Lihat daftar pegawai dan outlet yang mereka kelola.', '+ Tambah Pegawai', true, openAddEmployee);
         renderEmployees();
     } else if(page === 'pelanggan') {
-        setPageHeader('Pelanggan', 'Kelola daftar pelanggan dan lihat total belanjanya.', '+ Tambah Pelanggan', true, openCustomerModal, true, openEditBadgeModal, 'Edit Badge');
+        const access = CURRENT_EMPLOYEE ? (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase() : '';
+        if (access === 'admin') {
+            setPageHeader('Pelanggan', 'Kelola daftar pelanggan dan lihat total belanjanya.', '+ Tambah Pelanggan', true, openCustomerModal, true, openEditBadgeModal, 'Edit Badge');
+        } else {
+            setPageHeader('Pelanggan', 'Kelola daftar pelanggan dan lihat total belanjanya.', '+ Tambah Pelanggan', true, openCustomerModal);
+        }
         renderCustomersPage();
     } else if(page === 'outlet') {
-        setPageHeader('Outlet', 'Lihat daftar outlet, alamat, dan kontak.', '+ Tambah Outlet', true, openAddOutlet);
+        setPageHeader('Outlet', 'Lihat daftar outlet, alamat, dan kontak.', '+ Tambah Outlet', true, openAddOutlet, true, openGlobalDiscountModal, 'Buat Diskon');
         renderOutlets();
     } else if(page === 'draft') {
         setPageHeader('Draft Transaksi', 'Lihat dan buka draft transaksi yang tersimpan.', '', false);
@@ -1046,6 +1081,7 @@ async function loadCustomers() {
 function openCustomerModal() {
     editingCustomer = null;
     document.getElementById('customer-modal-title').innerText = 'Tambah Customer';
+    document.getElementById('customer-id-row').classList.add('hidden');
     document.getElementById('customer-modal').classList.remove('hidden');
     document.getElementById('customer-name').value = '';
     document.getElementById('customer-phone').value = '';
@@ -1060,6 +1096,8 @@ function openEditCustomer(id) {
     if (!cust) return;
     editingCustomer = cust;
     document.getElementById('customer-modal-title').innerText = 'Edit Customer';
+    document.getElementById('field-customer-id').value = formatCustomId(cust.id, 'customer');
+    document.getElementById('customer-id-row').classList.remove('hidden');
     document.getElementById('customer-modal').classList.remove('hidden');
     document.getElementById('customer-name').value = cust.name || '';
     document.getElementById('customer-phone').value = cust.phone || '';
@@ -1329,6 +1367,9 @@ function renderProductsAdmin(){
 
                 return `
                     <article class="product-card" style="display:flex; flex-direction:column; min-height: 310px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+                            <span style="font-size: 0.8rem; font-weight: bold; background: #f1f5f9; color: #64748b; padding: 4px 10px; border-radius: 999px; font-family: monospace;">ID: ${formatCustomId(p.id, 'product')}</span>
+                        </div>
                         <div class="top">
                             <div class="icon">${renderImageCircle(p.image, p.name) || categoryIcon(p.category)}</div>
                             <div class="meta" style="display:flex; flex-direction:column; gap:4px; align-items:flex-end;">
@@ -1342,7 +1383,6 @@ function renderProductsAdmin(){
                         <div class="stats" style="grid-template-columns: repeat(2, 1fr); margin-top:8px;">
                             <div class="stat"><span>Harga Modal</span><strong>${formatRupiah(p.modal || 0)}</strong></div>
                             <div class="stat"><span>Total Stok</span><strong>${p.stock ?? 0}</strong></div>
-                            <div class="stat"><span>ID</span><strong>${p.id}</strong></div>
                         </div>
                         <div style="margin-top: 8px; font-size: 0.85rem; color: #475569; border-top: 1px dashed rgba(0,0,0,0.05); padding-top: 8px;">
                             <div style="font-weight:700; margin-bottom: 8px;">Cabang & Stok:</div>
@@ -1364,9 +1404,12 @@ function renderProductsAdmin(){
             const q = e.target.value.toLowerCase();
             const filtered = PRODUCTS.filter(p => 
                 String(p.id).includes(q) ||
+                formatCustomId(p.id, 'product').toLowerCase().includes(q) ||
                 p.name.toLowerCase().includes(q) || 
                 (p.category || '').toLowerCase().includes(q) ||
-                (Array.isArray(p.stocks) && p.stocks.some(s => s.outlet_name.toLowerCase().includes(q)))
+                String(p.price || '').includes(q) ||
+                String(p.modal || '').includes(q) ||
+                (Array.isArray(p.stocks) && p.stocks.some(s => s.outlet_name.toLowerCase().includes(q) || String(s.stock).includes(q)))
             );
             renderList(filtered);
         });
@@ -1381,11 +1424,14 @@ function renderEmployees(){
         const renderList = list => {
             container.innerHTML = list.length ? list.map(emp => `
                 <article class="product-card user-card" style="display:flex; flex-direction:column; min-height:240px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                        <span style="font-size: 0.8rem; font-weight: bold; background: #f1f5f9; color: #64748b; padding: 4px 10px; border-radius: 999px; font-family: monospace;">ID: ${formatCustomId(emp.id, 'employee', emp.role || emp.access)}</span>
+                    </div>
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
                         <div>${renderImageCircle(emp.photo, emp.name, 48) || '<div style="width:48px;height:48px;border-radius:18px;background:#eef2ff;display:grid;place-items:center;color:#4338ca;">👤</div>'}</div>
                         <div>
                             <h3>${emp.name}</h3>
-                            <div class="meta">ID: ${emp.id} • ${emp.role || 'Staff'} • ${emp.email || '-'} • ${emp.phone || '-'}</div>
+                            <div class="meta">${emp.role || 'Staff'} • ${emp.email || '-'} • ${emp.phone || '-'}</div>
                         </div>
                     </div>
                     <div class="meta">Outlet: ${emp.outlet?.name || emp.outlet_id || 'Tidak tersedia'}</div>
@@ -1400,13 +1446,16 @@ function renderEmployees(){
 
         document.getElementById('search-pegawai').addEventListener('input', e => {
             const q = e.target.value.toLowerCase();
-            const filtered = EMPLOYEES.filter(emp => 
-                String(emp.id).includes(q) ||
-                emp.name.toLowerCase().includes(q) || 
-                (emp.role || '').toLowerCase().includes(q) || 
-                (emp.email || '').toLowerCase().includes(q) ||
-                (emp.outlet?.name || '').toLowerCase().includes(q)
-            );
+            const filtered = EMPLOYEES.filter(emp => {
+                const formattedId = formatCustomId(emp.id, 'employee', emp.role || emp.access).toLowerCase();
+                return String(emp.id).includes(q) ||
+                    formattedId.includes(q) ||
+                    emp.name.toLowerCase().includes(q) || 
+                    (emp.role || '').toLowerCase().includes(q) || 
+                    (emp.email || '').toLowerCase().includes(q) ||
+                    (emp.phone || '').toLowerCase().includes(q) ||
+                    (emp.outlet?.name || '').toLowerCase().includes(q);
+            });
             renderList(filtered);
         });
     });
@@ -1420,11 +1469,14 @@ function renderCustomersPage(){
         const renderList = list => {
             container.innerHTML = list.length ? list.map(cust => `
                 <article class="product-card user-card" style="display:flex; flex-direction:column; min-height:240px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                        <span style="font-size: 0.8rem; font-weight: bold; background: #f1f5f9; color: #64748b; padding: 4px 10px; border-radius: 999px; font-family: monospace;">ID: ${formatCustomId(cust.id, 'customer')}</span>
+                    </div>
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
                         <div><div style="width:48px;height:48px;border-radius:18px;background:#fef3c7;display:grid;place-items:center;color:#d97706;font-size:1.5rem;">⭐</div></div>
                         <div>
                             <h3>${cust.name} <span class="tier-badge ${cust.tier || 'Silver'}">${cust.badge || '🥈'} ${cust.tier || 'Silver'}</span></h3>
-                            <div class="meta">ID: ${cust.id} • ${cust.phone || 'Tidak ada no telp'}</div>
+                            <div class="meta">${cust.phone || 'Tidak ada no telp'}</div>
                             <div class="meta" style="margin-top:2px;">Email: ${cust.email || '-'}</div>
                             <div class="meta" style="margin-top:2px;">Tanggal Lahir: ${cust.dob ? new Date(cust.dob).toLocaleDateString('id-ID') : '-'}</div>
                         </div>
@@ -1451,12 +1503,18 @@ function renderCustomersPage(){
 
         document.getElementById('search-pelanggan').addEventListener('input', e => {
             const q = e.target.value.toLowerCase();
-            const filtered = CUSTOMERS.filter(c => 
-                String(c.id).includes(q) ||
-                c.name.toLowerCase().includes(q) || 
-                (c.phone || '').toLowerCase().includes(q) || 
-                (c.address || '').toLowerCase().includes(q)
-            );
+            const filtered = CUSTOMERS.filter(c => {
+                const formattedId = formatCustomId(c.id, 'customer').toLowerCase();
+                const dobStr = c.dob ? new Date(c.dob).toLocaleDateString('id-ID') : '';
+                return String(c.id).includes(q) ||
+                    formattedId.includes(q) ||
+                    c.name.toLowerCase().includes(q) || 
+                    (c.phone || '').toLowerCase().includes(q) || 
+                    (c.email || '').toLowerCase().includes(q) ||
+                    (c.address || '').toLowerCase().includes(q) ||
+                    (c.tier || '').toLowerCase().includes(q) ||
+                    dobStr.toLowerCase().includes(q);
+            });
             renderList(filtered);
         });
     });
@@ -1476,6 +1534,9 @@ function renderOutlets(){
 
                 return `
                     <article class="product-card user-card" style="display:flex; flex-direction:column; min-height:280px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                            <span style="font-size: 0.8rem; font-weight: bold; background: #f1f5f9; color: #64748b; padding: 4px 10px; border-radius: 999px; font-family: monospace;">ID: ${formatCustomId(out.id, 'outlet')}</span>
+                        </div>
                         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
                             <div>${renderImageCircle(out.image, out.name, 48) || '<div style="width:48px;height:48px;border-radius:18px;background:#f0f9ff;display:grid;place-items:center;color:#0284c7;">🏬</div>'}</div>
                             <div>
@@ -1483,7 +1544,6 @@ function renderOutlets(){
                                 <div class="meta">${out.address || '-'}${out.kelurahan ? ', ' + out.kelurahan : ''}</div>
                             </div>
                         </div>
-                        <div class="meta">ID Outlet: ${out.id}</div>
                         <div class="meta">Telp: ${out.phone || '-'}</div>
                         <div class="meta">Kode Pos: ${out.kode_pos || '-'}</div>
                         <div class="meta" style="margin-top: 8px; border-top: 1px dashed rgba(0,0,0,0.05); padding-top: 8px; font-size: 0.9rem;">
@@ -1502,12 +1562,20 @@ function renderOutlets(){
 
         document.getElementById('search-outlet').addEventListener('input', e => {
             const q = e.target.value.toLowerCase();
-            const filtered = OUTLETS.filter(out => 
-                String(out.id).includes(q) ||
-                out.name.toLowerCase().includes(q) || 
-                (out.address || '').toLowerCase().includes(q) ||
-                (out.kelurahan || '').toLowerCase().includes(q)
-            );
+            const filtered = OUTLETS.filter(out => {
+                const formattedId = formatCustomId(out.id, 'outlet').toLowerCase();
+                const supervisors = (out.employees || []).filter(emp => emp.role?.toLowerCase() === 'supervisor').map(emp => emp.name.toLowerCase());
+                const kasirs = (out.employees || []).filter(emp => emp.role?.toLowerCase() === 'kasir').map(emp => emp.name.toLowerCase());
+                return String(out.id).includes(q) ||
+                    formattedId.includes(q) ||
+                    out.name.toLowerCase().includes(q) || 
+                    (out.phone || '').toLowerCase().includes(q) ||
+                    (out.address || '').toLowerCase().includes(q) ||
+                    (out.kelurahan || '').toLowerCase().includes(q) ||
+                    (out.kode_pos || '').toLowerCase().includes(q) ||
+                    supervisors.some(name => name.includes(q)) ||
+                    kasirs.some(name => name.includes(q));
+            });
             renderList(filtered);
         });
     });
@@ -1533,6 +1601,7 @@ async function loadOutlets(){
 function openAddEmployee(){
     editingEmployee = null;
     document.getElementById('employee-modal').querySelector('h3').innerText = 'Tambah Pegawai';
+    document.getElementById('employee-id-row').classList.add('hidden');
     document.getElementById('employee-name').value = '';
     document.getElementById('employee-role').value = 'Kasir';
     document.getElementById('employee-email').value = '';
@@ -1552,6 +1621,8 @@ function openEditEmployee(employeeId){
     if(!employee) return;
     editingEmployee = employee;
     document.getElementById('employee-modal').querySelector('h3').innerText = 'Edit Pegawai';
+    document.getElementById('field-employee-id').value = formatCustomId(employee.id, 'employee', employee.role || employee.access);
+    document.getElementById('employee-id-row').classList.remove('hidden');
     document.getElementById('employee-name').value = employee.name || '';
     document.getElementById('employee-role').value = employee.role || 'Kasir';
     document.getElementById('employee-email').value = employee.email || '';
@@ -1569,6 +1640,7 @@ function openEditEmployee(employeeId){
 function openAddOutlet(){
     editingOutlet = null;
     document.getElementById('outlet-modal').querySelector('h3').innerText = 'Tambah Outlet';
+    document.getElementById('outlet-id-row').classList.add('hidden');
     document.getElementById('outlet-name').value = '';
     document.getElementById('outlet-phone').value = '';
     document.getElementById('outlet-address').value = '';
@@ -1584,6 +1656,8 @@ function openEditOutlet(outletId){
     if(!outlet) return;
     editingOutlet = outlet;
     document.getElementById('outlet-modal').querySelector('h3').innerText = 'Edit Outlet';
+    document.getElementById('field-outlet-id').value = formatCustomId(outlet.id, 'outlet');
+    document.getElementById('outlet-id-row').classList.remove('hidden');
     document.getElementById('outlet-name').value = outlet.name || '';
     document.getElementById('outlet-phone').value = outlet.phone || '';
     document.getElementById('outlet-address').value = outlet.address || '';
@@ -2208,33 +2282,86 @@ async function openEditBadgeModal() {
         console.error("Error loading customer tiers:", e);
     }
 
+    renderBadgeTierRows();
+    document.getElementById('badge-modal').classList.remove('hidden');
+}
+
+function renderBadgeTierRows() {
     const container = document.getElementById('badge-tiers-container');
-    if (container) {
-        container.innerHTML = CUSTOMER_TIERS.map(tier => `
-            <div class="badge-tier-row" data-tier-id="${tier.id}" style="border: 1px solid rgba(15,23,42,.08); padding: 16px; border-radius: 16px; background: #f8fafc;">
-                <div style="font-weight: 700; margin-bottom: 12px; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 1.25rem;">${tier.badge || '🥈'}</span>
-                    <span>Tier ${tier.name}</span>
+    if (!container) return;
+    
+    const rows = document.querySelectorAll('.badge-tier-row');
+    const existingData = [];
+    rows.forEach(row => {
+        existingData.push({
+            id: row.dataset.tierId || null,
+            name: row.querySelector('.tier-name-input')?.value || '',
+            min_spent: row.querySelector('.tier-min-spent')?.value || 0,
+            badge: row.querySelector('.tier-badge-input')?.value || '',
+            discount_percent: row.querySelector('.tier-discount')?.value || 0
+        });
+    });
+
+    const tiersToRender = existingData.length > 0 ? existingData : CUSTOMER_TIERS;
+
+    container.innerHTML = tiersToRender.map((tier, idx) => `
+        <div class="badge-tier-row" data-tier-id="${tier.id || ''}" style="border: 1px solid rgba(15,23,42,.08); padding: 16px; border-radius: 16px; background: #f8fafc; position: relative;">
+            ${idx > 0 ? `<button type="button" onclick="this.closest('.badge-tier-row').remove()" style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:#ef4444; padding:2px 6px;" title="Hapus tier">✕</button>` : ''}
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Nama Tier</label>
+                <input type="text" class="tier-name-input" required style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px; font-weight:700;" value="${tier.name || ''}" placeholder="Silver, Gold, Platinum..." />
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <div style="flex: 1.2;">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Minimal Belanja (Rp)</label>
+                    <input type="number" class="tier-min-spent" required style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px;" value="${tier.min_spent || 0}" />
                 </div>
-                <div style="display: flex; gap: 12px;">
-                    <div style="flex: 1.2;">
-                        <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Minimal Belanja (Rp)</label>
-                        <input type="number" class="tier-min-spent" required style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px;" value="${tier.min_spent || 0}" />
-                    </div>
-                    <div style="flex: 0.8;">
-                        <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Emoji Badge</label>
-                        <input type="text" class="tier-badge-input" required maxlength="2" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px; text-align: center;" value="${tier.badge || ''}" />
-                    </div>
-                    <div style="flex: 0.8;">
-                        <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Diskon (%)</label>
-                        <input type="number" class="tier-discount" required min="0" max="100" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px;" value="${tier.discount_percent || 0}" />
-                    </div>
+                <div style="flex: 0.8;">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Emoji Badge</label>
+                    <input type="text" class="tier-badge-input" required maxlength="2" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px; text-align: center;" value="${tier.badge || ''}" />
+                </div>
+                <div style="flex: 0.8;">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Diskon (%)</label>
+                    <input type="number" class="tier-discount" required min="0" max="100" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px;" value="${tier.discount_percent || 0}" />
                 </div>
             </div>
-        `).join('');
-    }
-    
-    document.getElementById('badge-modal').classList.remove('hidden');
+        </div>
+    `).join('') + `
+        <button type="button" onclick="addNewTierRow()" style="width:100%; padding:12px; border:2px dashed #cbd5e1; border-radius:16px; background:transparent; color:#64748b; font-weight:600; cursor:pointer; font-size:0.95rem; transition: all 0.2s ease;" onmouseover="this.style.borderColor='#10b981'; this.style.color='#10b981';" onmouseout="this.style.borderColor='#cbd5e1'; this.style.color='#64748b';">+ Tambah Tier</button>
+    `;
+}
+
+function addNewTierRow() {
+    const container = document.getElementById('badge-tiers-container');
+    if (!container) return;
+    const addBtn = container.querySelector('button[onclick="addNewTierRow()"]');
+    const newRow = document.createElement('div');
+    newRow.className = 'badge-tier-row';
+    newRow.dataset.tierId = '';
+    newRow.style.cssText = 'border: 1px solid rgba(15,23,42,.08); padding: 16px; border-radius: 16px; background: #f8fafc; position: relative;';
+    newRow.innerHTML = `
+        <button type="button" onclick="this.closest('.badge-tier-row').remove()" style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:#ef4444; padding:2px 6px;" title="Hapus tier">✕</button>
+        <div style="margin-bottom: 12px;">
+            <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Nama Tier</label>
+            <input type="text" class="tier-name-input" required style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px; font-weight:700;" value="" placeholder="Diamond, VIP..." />
+        </div>
+        <div style="display: flex; gap: 12px;">
+            <div style="flex: 1.2;">
+                <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Minimal Belanja (Rp)</label>
+                <input type="number" class="tier-min-spent" required style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px;" value="0" />
+            </div>
+            <div style="flex: 0.8;">
+                <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Emoji Badge</label>
+                <input type="text" class="tier-badge-input" required maxlength="2" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px; text-align: center;" value="" />
+            </div>
+            <div style="flex: 0.8;">
+                <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Diskon (%)</label>
+                <input type="number" class="tier-discount" required min="0" max="100" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px;" value="0" />
+            </div>
+        </div>
+    `;
+    container.insertBefore(newRow, addBtn);
+    newRow.querySelector('.tier-name-input').focus();
 }
 
 function bindBadgeForm() {
@@ -2245,18 +2372,27 @@ function bindBadgeForm() {
         
         const tiers = [];
         document.querySelectorAll('.badge-tier-row').forEach(row => {
-            const tierId = parseInt(row.dataset.tierId, 10);
+            const tierId = row.dataset.tierId ? parseInt(row.dataset.tierId, 10) : null;
+            const name = row.querySelector('.tier-name-input').value.trim();
             const minSpent = parseInt(row.querySelector('.tier-min-spent').value, 10) || 0;
             const badge = row.querySelector('.tier-badge-input').value.trim();
             const discountPercent = parseInt(row.querySelector('.tier-discount').value, 10) || 0;
             
+            if (!name) return;
+            
             tiers.push({
                 id: tierId,
+                name: name,
                 min_spent: minSpent,
                 badge: badge,
                 discount_percent: discountPercent
             });
         });
+        
+        if (tiers.length === 0) {
+            showAlert('Minimal harus ada 1 tier.', 'Peringatan', '⚠️');
+            return;
+        }
         
         const res = await fetch('/pos/api/customer-tiers', {
             method: 'POST',
@@ -2398,6 +2534,7 @@ function toggleOutletStockInput(checkbox) {
 function openAddProduct(){
     editingProduct = null;
     document.getElementById('modal-title').innerText = 'Tambah Produk';
+    document.getElementById('product-id-row').classList.add('hidden');
     document.getElementById('field-name').value = '';
     document.getElementById('field-category').value = '';
     document.getElementById('field-price').value = '';
@@ -2437,6 +2574,8 @@ function openEditProduct(productId){
     if(!product) return;
     editingProduct = product;
     document.getElementById('modal-title').innerText = 'Edit Produk';
+    document.getElementById('field-product-id').value = formatCustomId(product.id, 'product');
+    document.getElementById('product-id-row').classList.remove('hidden');
     document.getElementById('field-name').value = product.name || '';
     document.getElementById('field-category').value = product.category || '';
     document.getElementById('field-price').value = product.price || '';
@@ -2951,7 +3090,7 @@ function applyEmployeeRBAC() {
         menuDraft.classList.remove('hidden');
         menuProduk.classList.add('hidden');
         menuPegawai.classList.add('hidden');
-        menuPelanggan.classList.add('hidden');
+        menuPelanggan.classList.remove('hidden');
         menuOutlet.classList.add('hidden');
         menuLaporan.classList.remove('hidden');
     } else {
@@ -2959,7 +3098,7 @@ function applyEmployeeRBAC() {
         menuDraft.classList.remove('hidden');
         menuProduk.classList.add('hidden');
         menuPegawai.classList.add('hidden');
-        menuPelanggan.classList.add('hidden');
+        menuPelanggan.classList.remove('hidden');
         menuOutlet.classList.add('hidden');
         menuLaporan.classList.add('hidden');
     }

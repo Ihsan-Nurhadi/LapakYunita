@@ -346,25 +346,47 @@ class PosController extends Controller
     {
         $data = $r->validate([
             'tiers' => 'required|array',
-            'tiers.*.id' => 'required|integer|exists:customer_tiers,id',
+            'tiers.*.id' => 'nullable|integer|exists:customer_tiers,id',
+            'tiers.*.name' => 'required|string|max:50',
             'tiers.*.min_spent' => 'required|integer|min:0',
             'tiers.*.badge' => 'required|string|max:10',
             'tiers.*.discount_percent' => 'required|integer|min:0|max:100',
         ]);
 
-        $updated = [];
+        $receivedIds = [];
+        $result = [];
         foreach ($data['tiers'] as $tierData) {
-            $tier = \App\Models\CustomerTier::find($tierData['id']);
-            if ($tier) {
-                $tier->update([
+            if (!empty($tierData['id'])) {
+                $tier = \App\Models\CustomerTier::find($tierData['id']);
+                if ($tier) {
+                    $tier->update([
+                        'name' => $tierData['name'],
+                        'min_spent' => $tierData['min_spent'],
+                        'badge' => $tierData['badge'],
+                        'discount_percent' => $tierData['discount_percent'],
+                    ]);
+                    $receivedIds[] = $tier->id;
+                    $result[] = $tier;
+                }
+            } else {
+                $tier = \App\Models\CustomerTier::create([
+                    'name' => $tierData['name'],
                     'min_spent' => $tierData['min_spent'],
                     'badge' => $tierData['badge'],
                     'discount_percent' => $tierData['discount_percent'],
                 ]);
-                $updated[] = $tier;
+                $receivedIds[] = $tier->id;
+                $result[] = $tier;
             }
         }
-        return response()->json($updated);
+
+        // Delete tiers not in the payload
+        \App\Models\CustomerTier::whereNotIn('id', $receivedIds)->delete();
+
+        // Clear cached tiers in Customer model
+        \App\Models\Customer::clearTierCache();
+
+        return response()->json(\App\Models\CustomerTier::orderBy('min_spent')->get());
     }
     public function transactions()
     {

@@ -22,6 +22,11 @@ class Customer extends Model
         return self::$cachedTiers;
     }
 
+    public static function clearTierCache()
+    {
+        self::$cachedTiers = null;
+    }
+
     public function transactions()
     {
         return $this->hasMany(PosTransaction::class, 'customer_id');
