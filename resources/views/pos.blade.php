@@ -1490,12 +1490,10 @@ function renderCustomersPage(){
                             <strong style="color:#10b981;">${formatRupiah(cust.transactions_sum_total || 0)}</strong>
                         </div>
                     </div>
-                    ${canManage ? `
                     <div class="actions" style="margin-top:auto; padding-top:12px;">
                         <button type="button" class="btn-edit" onclick="openEditCustomer(${cust.id})">Edit</button>
-                        <button type="button" class="btn-delete" onclick="deleteCustomer(${cust.id})">Hapus</button>
+                        ${canManage ? `<button type="button" class="btn-delete" onclick="deleteCustomer(${cust.id})">Hapus</button>` : ''}
                     </div>
-                    ` : ''}
                 </article>
             `).join('') : '<div class="empty-state">Belum ada data pelanggan.</div>';
         };
