@@ -868,6 +868,9 @@ function renderTransaction(){
         const renderList = list => {
             container.innerHTML = list.map(p => `
                 <article class="product-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+                        <span style="font-size: 0.8rem; font-weight: bold; background: #f1f5f9; color: #64748b; padding: 4px 10px; border-radius: 999px; font-family: monospace;">ID: ${formatCustomId(p.id, 'product')}</span>
+                    </div>
                     <div class="top">
                         <div class="icon">${renderImageCircle(p.image, p.name) || categoryIcon(p.category)}</div>
                         <div class="meta">
@@ -885,10 +888,9 @@ function renderTransaction(){
                             }
                         </div>
                     </div>
-                    <div class="stats">
+                    <div class="stats" style="grid-template-columns: repeat(2, 1fr); margin-top:8px;">
                         <div class="stat"><span>Harga Modal</span><strong>${formatRupiah(p.modal || 0)}</strong></div>
                         <div class="stat"><span>Stok</span><strong>${p.stock ?? 0}</strong></div>
-                        <div class="stat"><span>ID</span><strong>${p.id}</strong></div>
                     </div>
                     <button class="secondary-btn" style="width:100%;" onclick="addToCart(${p.id})">Tambah ke Keranjang</button>
                 </article>
@@ -897,7 +899,12 @@ function renderTransaction(){
         renderList(PRODUCTS);
         document.getElementById('search').addEventListener('input', e => {
             const q = e.target.value.toLowerCase();
-            const filtered = PRODUCTS.filter(p => p.name.toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q));
+            const filtered = PRODUCTS.filter(p => 
+                String(p.id).includes(q) ||
+                formatCustomId(p.id, 'product').toLowerCase().includes(q) ||
+                p.name.toLowerCase().includes(q) || 
+                (p.category || '').toLowerCase().includes(q)
+            );
             renderList(filtered);
         });
     });
