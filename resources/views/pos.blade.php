@@ -252,6 +252,7 @@
             <button class="menu-item" id="menu-produk" data-page="produk">📦 Produk</button>
             <button class="menu-item" id="menu-pegawai" data-page="pegawai">👥 Pegawai</button>
             <button class="menu-item" id="menu-pelanggan" data-page="pelanggan">⭐ Pelanggan</button>
+            <button class="menu-item" id="menu-badge" data-page="badge">🎖️ Badge</button>
             <button class="menu-item" id="menu-outlet" data-page="outlet">🏪 Outlet</button>
             <button class="menu-item" id="menu-laporan" data-page="laporan">📊 Laporan</button>
         </nav>
@@ -571,6 +572,20 @@
     </div>
 </template>
 
+<template id="tpl-badge">
+    <div style="max-width: 600px; background: #fff; border: 1px solid rgba(15,23,42,.08); padding: 24px; border-radius: 24px;">
+        <form id="badge-form-page">
+            <div id="badge-tiers-container-page" style="display:flex; flex-direction:column; gap:16px; margin-bottom: 20px;">
+                <!-- Dinamis diisi lewat JavaScript -->
+            </div>
+            
+            <div style="margin-top: 24px; display: flex; justify-content: flex-end;">
+                <button type="submit" class="primary-btn">Simpan Badge</button>
+            </div>
+        </form>
+    </div>
+</template>
+
 <div id="employee-modal" class="modal-backdrop hidden" onclick="closeModal(event)">
     <div class="modal-pane" onclick="event.stopPropagation()">
         <h3>Tambah Pegawai</h3>
@@ -705,23 +720,6 @@
     </div>
 </div>
 
-<!-- Badge Modal -->
-<div id="badge-modal" class="modal-backdrop hidden" onclick="closeModal(event)">
-    <div class="modal-pane" onclick="event.stopPropagation()" style="max-width: 520px;">
-        <h3>Pengaturan Badge & Diskon Pelanggan</h3>
-        <p style="color:#64748b; font-size:0.9rem; margin-top:-8px; margin-bottom:16px;">Tentukan minimal pembelian, emoji badge, dan persentase diskon untuk masing-masing tier pelanggan.</p>
-        <form id="badge-form">
-            <div id="badge-tiers-container" style="display:flex; flex-direction:column; gap:16px; margin-bottom: 20px;">
-                <!-- Dinamis diisi lewat JavaScript -->
-            </div>
-            
-            <div class="modal-actions">
-                <button type="button" class="secondary-btn" onclick="closeModal()">Batal</button>
-                <button type="submit" class="primary-btn">Simpan Badge</button>
-            </div>
-        </form>
-    </div>
-</div>
 
 <script>
 const formatRupiah = n => 'Rp ' + Number(n || 0).toLocaleString('id-ID');
@@ -844,13 +842,11 @@ function showPage(page){
         setPageHeader('Pegawai', 'Lihat daftar pegawai dan outlet yang mereka kelola.', '+ Tambah Pegawai', true, openAddEmployee);
         renderEmployees();
     } else if(page === 'pelanggan') {
-        const access = CURRENT_EMPLOYEE ? (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase() : '';
-        if (access === 'admin') {
-            setPageHeader('Pelanggan', 'Kelola daftar pelanggan dan lihat total belanjanya.', '+ Tambah Pelanggan', true, openCustomerModal, true, openEditBadgeModal, 'Edit Badge');
-        } else {
-            setPageHeader('Pelanggan', 'Kelola daftar pelanggan dan lihat total belanjanya.', '+ Tambah Pelanggan', true, openCustomerModal);
-        }
+        setPageHeader('Pelanggan', 'Kelola daftar pelanggan dan lihat total belanjanya.', '+ Tambah Pelanggan', true, openCustomerModal);
         renderCustomersPage();
+    } else if(page === 'badge') {
+        setPageHeader('Badge Pelanggan', 'Tentukan minimal belanja, emoji badge, dan persentase diskon untuk masing-masing tier pelanggan.', '', false);
+        renderBadgePage();
     } else if(page === 'outlet') {
         setPageHeader('Outlet', 'Lihat daftar outlet, alamat, dan kontak.', '+ Tambah Outlet', true, openAddOutlet, true, openGlobalDiscountModal, 'Buat Diskon');
         renderOutlets();
@@ -1467,6 +1463,8 @@ function renderCustomersPage(){
         CUSTOMERS = data;
         const container = document.getElementById('customers-admin');
         const renderList = list => {
+            const access = CURRENT_EMPLOYEE ? (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase() : '';
+            const canManage = (access === 'admin');
             container.innerHTML = list.length ? list.map(cust => `
                 <article class="product-card user-card" style="display:flex; flex-direction:column; min-height:240px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
@@ -1492,10 +1490,12 @@ function renderCustomersPage(){
                             <strong style="color:#10b981;">${formatRupiah(cust.transactions_sum_total || 0)}</strong>
                         </div>
                     </div>
+                    ${canManage ? `
                     <div class="actions" style="margin-top:auto; padding-top:12px;">
                         <button type="button" class="btn-edit" onclick="openEditCustomer(${cust.id})">Edit</button>
                         <button type="button" class="btn-delete" onclick="deleteCustomer(${cust.id})">Hapus</button>
                     </div>
+                    ` : ''}
                 </article>
             `).join('') : '<div class="empty-state">Belum ada data pelanggan.</div>';
         };
@@ -2272,7 +2272,8 @@ function bindGlobalDiscountForm() {
     });
 }
 
-async function openEditBadgeModal() {
+async function renderBadgePage() {
+    document.getElementById('page-content').innerHTML = document.getElementById('tpl-badge').innerHTML;
     try {
         const res = await fetch('/pos/api/customer-tiers');
         if (res.ok) {
@@ -2282,15 +2283,15 @@ async function openEditBadgeModal() {
         console.error("Error loading customer tiers:", e);
     }
 
-    renderBadgeTierRows();
-    document.getElementById('badge-modal').classList.remove('hidden');
+    renderBadgeTierPageRows();
+    bindBadgePageForm();
 }
 
-function renderBadgeTierRows() {
-    const container = document.getElementById('badge-tiers-container');
+function renderBadgeTierPageRows() {
+    const container = document.getElementById('badge-tiers-container-page');
     if (!container) return;
     
-    const rows = document.querySelectorAll('.badge-tier-row');
+    const rows = document.querySelectorAll('.badge-tier-page-row');
     const existingData = [];
     rows.forEach(row => {
         existingData.push({
@@ -2305,8 +2306,8 @@ function renderBadgeTierRows() {
     const tiersToRender = existingData.length > 0 ? existingData : CUSTOMER_TIERS;
 
     container.innerHTML = tiersToRender.map((tier, idx) => `
-        <div class="badge-tier-row" data-tier-id="${tier.id || ''}" style="border: 1px solid rgba(15,23,42,.08); padding: 16px; border-radius: 16px; background: #f8fafc; position: relative;">
-            ${idx > 0 ? `<button type="button" onclick="this.closest('.badge-tier-row').remove()" style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:#ef4444; padding:2px 6px;" title="Hapus tier">✕</button>` : ''}
+        <div class="badge-tier-page-row" data-tier-id="${tier.id || ''}" style="border: 1px solid rgba(15,23,42,.08); padding: 16px; border-radius: 16px; background: #f8fafc; position: relative;">
+            ${idx > 0 ? `<button type="button" onclick="this.closest('.badge-tier-page-row').remove()" style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:#ef4444; padding:2px 6px;" title="Hapus tier">✕</button>` : ''}
             <div style="margin-bottom: 12px;">
                 <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Nama Tier</label>
                 <input type="text" class="tier-name-input" required style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px; font-weight:700;" value="${tier.name || ''}" placeholder="Silver, Gold, Platinum..." />
@@ -2327,20 +2328,20 @@ function renderBadgeTierRows() {
             </div>
         </div>
     `).join('') + `
-        <button type="button" onclick="addNewTierRow()" style="width:100%; padding:12px; border:2px dashed #cbd5e1; border-radius:16px; background:transparent; color:#64748b; font-weight:600; cursor:pointer; font-size:0.95rem; transition: all 0.2s ease;" onmouseover="this.style.borderColor='#10b981'; this.style.color='#10b981';" onmouseout="this.style.borderColor='#cbd5e1'; this.style.color='#64748b';">+ Tambah Tier</button>
+        <button type="button" onclick="addNewTierPageRow()" style="width:100%; padding:12px; border:2px dashed #cbd5e1; border-radius:16px; background:transparent; color:#64748b; font-weight:600; cursor:pointer; font-size:0.95rem; transition: all 0.2s ease;" onmouseover="this.style.borderColor='#10b981'; this.style.color='#10b981';" onmouseout="this.style.borderColor='#cbd5e1'; this.style.color='#64748b';">+ Tambah Tier</button>
     `;
 }
 
-function addNewTierRow() {
-    const container = document.getElementById('badge-tiers-container');
+function addNewTierPageRow() {
+    const container = document.getElementById('badge-tiers-container-page');
     if (!container) return;
-    const addBtn = container.querySelector('button[onclick="addNewTierRow()"]');
+    const addBtn = container.querySelector('button[onclick="addNewTierPageRow()"]');
     const newRow = document.createElement('div');
-    newRow.className = 'badge-tier-row';
+    newRow.className = 'badge-tier-page-row';
     newRow.dataset.tierId = '';
     newRow.style.cssText = 'border: 1px solid rgba(15,23,42,.08); padding: 16px; border-radius: 16px; background: #f8fafc; position: relative;';
     newRow.innerHTML = `
-        <button type="button" onclick="this.closest('.badge-tier-row').remove()" style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:#ef4444; padding:2px 6px;" title="Hapus tier">✕</button>
+        <button type="button" onclick="this.closest('.badge-tier-page-row').remove()" style="position:absolute; top:8px; right:8px; background:none; border:none; cursor:pointer; font-size:1.1rem; color:#ef4444; padding:2px 6px;" title="Hapus tier">✕</button>
         <div style="margin-bottom: 12px;">
             <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Nama Tier</label>
             <input type="text" class="tier-name-input" required style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px; font-weight:700;" value="" placeholder="Diamond, VIP..." />
@@ -2364,14 +2365,14 @@ function addNewTierRow() {
     newRow.querySelector('.tier-name-input').focus();
 }
 
-function bindBadgeForm() {
-    const form = document.getElementById('badge-form');
+function bindBadgePageForm() {
+    const form = document.getElementById('badge-form-page');
     if (!form) return;
     form.addEventListener('submit', async e => {
         e.preventDefault();
         
         const tiers = [];
-        document.querySelectorAll('.badge-tier-row').forEach(row => {
+        document.querySelectorAll('.badge-tier-page-row').forEach(row => {
             const tierId = row.dataset.tierId ? parseInt(row.dataset.tierId, 10) : null;
             const name = row.querySelector('.tier-name-input').value.trim();
             const minSpent = parseInt(row.querySelector('.tier-min-spent').value, 10) || 0;
@@ -2405,11 +2406,8 @@ function bindBadgeForm() {
         
         if (res.ok) {
             CUSTOMER_TIERS = await res.json();
-            closeModal();
             showAlert('Aturan badge pelanggan berhasil disimpan', 'Berhasil', '✅');
-            if (document.getElementById('customers-admin')) {
-                renderCustomersPage();
-            }
+            renderBadgePage();
         } else {
             showAlert('Gagal menyimpan aturan badge', 'Error', '❌');
         }
@@ -3074,6 +3072,7 @@ function applyEmployeeRBAC() {
     const menuProduk = document.getElementById('menu-produk');
     const menuPegawai = document.getElementById('menu-pegawai');
     const menuPelanggan = document.getElementById('menu-pelanggan');
+    const menuBadge = document.getElementById('menu-badge');
     const menuOutlet = document.getElementById('menu-outlet');
     const menuLaporan = document.getElementById('menu-laporan');
     
@@ -3083,6 +3082,7 @@ function applyEmployeeRBAC() {
         menuProduk.classList.remove('hidden');
         menuPegawai.classList.remove('hidden');
         menuPelanggan.classList.remove('hidden');
+        if (menuBadge) menuBadge.classList.remove('hidden');
         menuOutlet.classList.remove('hidden');
         menuLaporan.classList.remove('hidden');
     } else if (access === 'supervisor') {
@@ -3091,6 +3091,7 @@ function applyEmployeeRBAC() {
         menuProduk.classList.add('hidden');
         menuPegawai.classList.add('hidden');
         menuPelanggan.classList.remove('hidden');
+        if (menuBadge) menuBadge.classList.add('hidden');
         menuOutlet.classList.add('hidden');
         menuLaporan.classList.remove('hidden');
     } else {
@@ -3099,6 +3100,7 @@ function applyEmployeeRBAC() {
         menuProduk.classList.add('hidden');
         menuPegawai.classList.add('hidden');
         menuPelanggan.classList.remove('hidden');
+        if (menuBadge) menuBadge.classList.add('hidden');
         menuOutlet.classList.add('hidden');
         menuLaporan.classList.add('hidden');
     }
@@ -3112,7 +3114,6 @@ window.addEventListener('DOMContentLoaded', () => {
     bindPaymentForm();
     bindChangePinForm();
     bindGlobalDiscountForm();
-    bindBadgeForm();
     loadOutlets();
     
     // Bind login form
