@@ -2173,15 +2173,20 @@ function exportReportToPdf() {
 
 function closeModal(event){
     if(event) event.stopPropagation();
-    document.getElementById('product-modal').classList.add('hidden');
-    document.getElementById('employee-modal').classList.add('hidden');
-    document.getElementById('outlet-modal').classList.add('hidden');
-    document.getElementById('invoice-modal').classList.add('hidden');
-    document.getElementById('payment-modal').classList.add('hidden');
-    document.getElementById('change-pin-modal').classList.add('hidden');
-    document.getElementById('global-discount-modal').classList.add('hidden');
-    document.getElementById('customer-modal').classList.add('hidden');
-    document.getElementById('badge-modal').classList.add('hidden');
+    const modals = [
+        'product-modal',
+        'employee-modal',
+        'outlet-modal',
+        'invoice-modal',
+        'payment-modal',
+        'change-pin-modal',
+        'global-discount-modal',
+        'customer-modal'
+    ];
+    modals.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.classList.add('hidden');
+    });
 }
 
 function toggleDiscountOutletInput(checkbox) {
