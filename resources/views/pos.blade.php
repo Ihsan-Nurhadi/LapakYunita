@@ -252,7 +252,7 @@
             <button class="menu-item" id="menu-produk" data-page="produk">📦 Produk</button>
             <button class="menu-item" id="menu-pegawai" data-page="pegawai">👥 Pegawai</button>
             <button class="menu-item" id="menu-pelanggan" data-page="pelanggan">⭐ Pelanggan</button>
-            <button class="menu-item" id="menu-badge" data-page="badge">🎖️ Badge</button>
+            <button class="menu-item" id="menu-badge" data-page="badge">🎖️ Badge & tier pelanggan</button>
             <button class="menu-item" id="menu-outlet" data-page="outlet">🏪 Outlet</button>
             <button class="menu-item" id="menu-laporan" data-page="laporan">📊 Laporan</button>
         </nav>
