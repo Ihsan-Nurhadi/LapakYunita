@@ -51,7 +51,9 @@ class Customer extends Model
         $spent = $this->getTotalSpent();
         $tiers = self::getCachedTiers();
         foreach ($tiers as $tier) {
-            if ($spent >= $tier->min_spent) {
+            $min = $tier->min_spent;
+            $max = $tier->max_spent;
+            if ($spent >= $min && ($max === null || $spent <= $max)) {
                 return $tier->name;
             }
         }
@@ -63,7 +65,9 @@ class Customer extends Model
         $spent = $this->getTotalSpent();
         $tiers = self::getCachedTiers();
         foreach ($tiers as $tier) {
-            if ($spent >= $tier->min_spent) {
+            $min = $tier->min_spent;
+            $max = $tier->max_spent;
+            if ($spent >= $min && ($max === null || $spent <= $max)) {
                 return $tier->badge;
             }
         }
@@ -75,7 +79,9 @@ class Customer extends Model
         $spent = $this->getTotalSpent();
         $tiers = self::getCachedTiers();
         foreach ($tiers as $tier) {
-            if ($spent >= $tier->min_spent) {
+            $min = $tier->min_spent;
+            $max = $tier->max_spent;
+            if ($spent >= $min && ($max === null || $spent <= $max)) {
                 return $tier->discount_percent;
             }
         }

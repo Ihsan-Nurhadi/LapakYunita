@@ -349,6 +349,7 @@ class PosController extends Controller
             'tiers.*.id' => 'nullable|integer|exists:customer_tiers,id',
             'tiers.*.name' => 'required|string|max:50',
             'tiers.*.min_spent' => 'required|integer|min:0',
+            'tiers.*.max_spent' => 'nullable|integer|min:0',
             'tiers.*.badge' => 'required|string|max:10',
             'tiers.*.discount_percent' => 'required|integer|min:0|max:100',
         ]);
@@ -356,12 +357,14 @@ class PosController extends Controller
         $receivedIds = [];
         $result = [];
         foreach ($data['tiers'] as $tierData) {
+            $maxSpent = isset($tierData['max_spent']) && $tierData['max_spent'] !== '' ? $tierData['max_spent'] : null;
             if (!empty($tierData['id'])) {
                 $tier = \App\Models\CustomerTier::find($tierData['id']);
                 if ($tier) {
                     $tier->update([
                         'name' => $tierData['name'],
                         'min_spent' => $tierData['min_spent'],
+                        'max_spent' => $maxSpent,
                         'badge' => $tierData['badge'],
                         'discount_percent' => $tierData['discount_percent'],
                     ]);
@@ -372,6 +375,7 @@ class PosController extends Controller
                 $tier = \App\Models\CustomerTier::create([
                     'name' => $tierData['name'],
                     'min_spent' => $tierData['min_spent'],
+                    'max_spent' => $maxSpent,
                     'badge' => $tierData['badge'],
                     'discount_percent' => $tierData['discount_percent'],
                 ]);

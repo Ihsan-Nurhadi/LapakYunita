@@ -2304,10 +2304,12 @@ function renderBadgeTierPageRows() {
     const rows = document.querySelectorAll('.badge-tier-page-row');
     const existingData = [];
     rows.forEach(row => {
+        const maxVal = row.querySelector('.tier-max-spent')?.value.trim() || '';
         existingData.push({
             id: row.dataset.tierId || null,
             name: row.querySelector('.tier-name-input')?.value || '',
             min_spent: row.querySelector('.tier-min-spent')?.value || 0,
+            max_spent: maxVal !== '' ? parseInt(maxVal, 10) : null,
             badge: row.querySelector('.tier-badge-input')?.value || '',
             discount_percent: row.querySelector('.tier-discount')?.value || 0
         });
@@ -2322,16 +2324,20 @@ function renderBadgeTierPageRows() {
                 <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Nama Tier</label>
                 <input type="text" class="tier-name-input" required style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px; font-weight:700;" value="${tier.name || ''}" placeholder="Silver, Gold, Platinum..." />
             </div>
-            <div style="display: flex; gap: 12px;">
-                <div style="flex: 1.2;">
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 120px;">
                     <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Minimal Belanja (Rp)</label>
                     <input type="number" class="tier-min-spent" required style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px;" value="${tier.min_spent || 0}" />
                 </div>
-                <div style="flex: 0.8;">
+                <div style="flex: 1; min-width: 120px;">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Maksimal Belanja (Rp)</label>
+                    <input type="number" class="tier-max-spent" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px;" value="${tier.max_spent !== undefined && tier.max_spent !== null ? tier.max_spent : ''}" placeholder="Infinity" />
+                </div>
+                <div style="flex: 0.8; min-width: 80px;">
                     <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Emoji Badge</label>
                     <input type="text" class="tier-badge-input" required maxlength="2" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px; text-align: center;" value="${tier.badge || ''}" />
                 </div>
-                <div style="flex: 0.8;">
+                <div style="flex: 0.8; min-width: 80px;">
                     <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Diskon (%)</label>
                     <input type="number" class="tier-discount" required min="0" max="100" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px;" value="${tier.discount_percent || 0}" />
                 </div>
@@ -2356,16 +2362,20 @@ function addNewTierPageRow() {
             <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Nama Tier</label>
             <input type="text" class="tier-name-input" required style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px; font-weight:700;" value="" placeholder="Diamond, VIP..." />
         </div>
-        <div style="display: flex; gap: 12px;">
-            <div style="flex: 1.2;">
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 120px;">
                 <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Minimal Belanja (Rp)</label>
                 <input type="number" class="tier-min-spent" required style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px;" value="0" />
             </div>
-            <div style="flex: 0.8;">
+            <div style="flex: 1; min-width: 120px;">
+                <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Maksimal Belanja (Rp)</label>
+                <input type="number" class="tier-max-spent" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px;" value="" placeholder="Infinity" />
+            </div>
+            <div style="flex: 0.8; min-width: 80px;">
                 <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Emoji Badge</label>
                 <input type="text" class="tier-badge-input" required maxlength="2" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px; text-align: center;" value="" />
             </div>
-            <div style="flex: 0.8;">
+            <div style="flex: 0.8; min-width: 80px;">
                 <label style="font-size: 0.8rem; font-weight: 600; color: #475569;">Diskon (%)</label>
                 <input type="number" class="tier-discount" required min="0" max="100" style="width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:8px; margin-top:4px;" value="0" />
             </div>
@@ -2386,6 +2396,8 @@ function bindBadgePageForm() {
             const tierId = row.dataset.tierId ? parseInt(row.dataset.tierId, 10) : null;
             const name = row.querySelector('.tier-name-input').value.trim();
             const minSpent = parseInt(row.querySelector('.tier-min-spent').value, 10) || 0;
+            const maxVal = row.querySelector('.tier-max-spent').value.trim();
+            const maxSpent = maxVal !== '' ? parseInt(maxVal, 10) : null;
             const badge = row.querySelector('.tier-badge-input').value.trim();
             const discountPercent = parseInt(row.querySelector('.tier-discount').value, 10) || 0;
             
@@ -2395,6 +2407,7 @@ function bindBadgePageForm() {
                 id: tierId,
                 name: name,
                 min_spent: minSpent,
+                max_spent: maxSpent,
                 badge: badge,
                 discount_percent: discountPercent
             });

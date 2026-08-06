@@ -9,5 +9,5 @@ class CustomerTier extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'badge', 'min_spent', 'discount_percent'];
+    protected $fillable = ['name', 'badge', 'min_spent', 'max_spent', 'discount_percent'];
 }
