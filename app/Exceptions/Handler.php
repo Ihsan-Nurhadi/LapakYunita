@@ -27,28 +27,4 @@ class Handler extends ExceptionHandler
             //
         });
     }
-
-    /**
-     * Render an exception into an HTTP response.
-     */
-    public function render($request, Throwable $e)
-    {
-        header('Content-Type: application/json');
-        http_response_code(500);
-        echo json_encode([
-            'error' => $e->getMessage(),
-            'exception' => get_class($e),
-            'file' => $e->getFile(),
-            'line' => $e->getLine(),
-            'trace' => array_slice(array_map(function($t) {
-                return [
-                    'file' => isset($t['file']) ? $t['file'] : null,
-                    'line' => isset($t['line']) ? $t['line'] : null,
-                    'function' => isset($t['function']) ? $t['function'] : null,
-                    'class' => isset($t['class']) ? $t['class'] : null,
-                ];
-            }, $e->getTrace()), 0, 10),
-        ], JSON_PRETTY_PRINT);
-        exit;
-    }
 }
