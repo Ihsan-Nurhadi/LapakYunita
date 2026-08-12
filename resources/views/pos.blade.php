@@ -903,7 +903,11 @@ function renderTransaction(){
                 String(p.id).includes(q) ||
                 formatCustomId(p.id, 'product').toLowerCase().includes(q) ||
                 p.name.toLowerCase().includes(q) || 
-                (p.category || '').toLowerCase().includes(q)
+                (p.category || '').toLowerCase().includes(q) ||
+                String(p.price).includes(q) ||
+                String(p.modal || '').includes(q) ||
+                formatRupiah(p.price).toLowerCase().includes(q) ||
+                formatRupiah(p.modal || 0).toLowerCase().includes(q)
             );
             renderList(filtered);
         });
