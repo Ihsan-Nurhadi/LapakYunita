@@ -82,14 +82,25 @@
     .user-card { display:flex; flex-direction:column; justify-content:space-between; gap:12px; }
     .user-card .meta { color:#475569; font-size:.92rem; }
 
-    .modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.45); display:grid; place-items:center; padding:20px; z-index:50; }
+    .modal-backdrop { 
+        position: fixed; 
+        inset: 0; 
+        background: rgba(15,23,42,.45); 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        padding: 20px; 
+        z-index: 50; 
+        overflow-y: auto; 
+    }
     .modal-pane { 
         background: #fff; 
         border-radius: 24px; 
         max-width: 520px; 
         width: 100%; 
-        padding: 28px; /* Sedikit diperlebar agar lebih lega */
+        padding: 28px; 
         box-shadow: 0 34px 88px rgba(15,23,42,.18); 
+        margin: auto; /* Handles vertical centering & overflow scrolling */
     }
 
     .modal-pane h3 { 
@@ -187,6 +198,163 @@
         .tier-badge.Gold { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
         .tier-badge.Platinum { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
     }
+
+    /* Responsive Media Queries (Mobile & Tablet) */
+    .mobile-header {
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        background: #fff;
+        border-bottom: 1px solid rgba(15,23,42,.08);
+        padding: 12px 16px;
+        position: sticky;
+        top: 0;
+        z-index: 40;
+    }
+    .sidebar-toggle {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 4px 8px;
+        color: #0f172a;
+    }
+    .mobile-brand {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+    
+    .sidebar-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15,23,42,0.4);
+        backdrop-filter: blur(4px);
+        z-index: 98;
+    }
+
+    .report-main-grid {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 18px;
+    }
+
+    .transaction-tabs {
+        display: none;
+    }
+
+    @media (max-width: 1024px) {
+        .pos-shell {
+            grid-template-columns: 1fr;
+            gap: 16px;
+            padding-top: 10px;
+            min-height: auto;
+        }
+        
+        .mobile-header {
+            display: flex;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 280px;
+            height: 100vh;
+            z-index: 99;
+            border-radius: 0;
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 20px 0 50px rgba(0,0,0,0.15);
+            overflow-y: auto;
+        }
+        
+        .sidebar.open {
+            transform: translateX(0);
+        }
+        
+        .sidebar-backdrop.open {
+            display: block;
+        }
+        
+        .grid {
+            grid-template-columns: 1fr !important;
+        }
+
+        .transaction-tabs {
+            display: flex !important;
+            margin-bottom: 16px;
+            gap: 8px;
+            width: 100%;
+        }
+        
+        .transaction-tabs button {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            border-radius: 12px;
+            background: #fff;
+            font-weight: 700;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        
+        .transaction-tabs button.active {
+            background: #10b981;
+            color: #fff;
+            border-color: #10b981;
+        }
+        
+        .products-column.hidden-mobile,
+        .cart-column.hidden-mobile {
+            display: none !important;
+        }
+
+        .report-main-grid {
+            grid-template-columns: 1fr !important;
+        }
+
+        .report-summary-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .modal-pane {
+            padding: 20px;
+            border-radius: 16px;
+        }
+        .modal-actions {
+            margin-top: 20px;
+            flex-direction: column-reverse;
+            gap: 8px;
+        }
+        .modal-actions button {
+            width: 100%;
+            margin: 0 !important;
+        }
+        .page-header {
+            flex-direction: column;
+            align-items: stretch !important;
+            gap: 12px;
+        }
+        .page-header div[style*="display:flex"] {
+            width: 100%;
+        }
+        .page-header button {
+            flex: 1;
+            text-align: center;
+            justify-content: center;
+        }
+        .card-grid {
+            grid-template-columns: 1fr !important;
+        }
+    }
     </style>
     @endpush
 
@@ -240,7 +408,21 @@
 </div>
 
 <div class="pos-shell hidden" id="pos-app-shell">
-    <aside class="sidebar">
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <button type="button" class="sidebar-toggle" onclick="toggleSidebar()">
+            <span>☰</span>
+        </button>
+        <div class="mobile-brand">KasirPOS</div>
+        <div class="mobile-user" onclick="toggleSidebar()">
+            <div class="avatar" id="mobile-avatar" style="width: 32px; height: 32px; font-size: 0.9rem; display: grid; place-items: center;">?</div>
+        </div>
+    </header>
+
+    <!-- Sidebar Backdrop for Mobile Drawer -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebar()"></div>
+
+    <aside class="sidebar" id="sidebar-drawer">
         <div>
             <div class="brand">KasirPOS</div>
             <div class="brand-desc">Sistem Kasir Online</div>
@@ -484,8 +666,14 @@
 </div>
 
 <template id="tpl-transaksi">
-    <div class="grid">
-        <div>
+    <div class="grid transaction-grid">
+        <!-- Tabs for mobile -->
+        <div class="transaction-tabs" style="display: none;">
+            <button type="button" id="tab-products" class="active" onclick="switchTxTab('products')">📦 Produk</button>
+            <button type="button" id="tab-cart" onclick="switchTxTab('cart')">🛒 Keranjang (<span id="mobile-cart-badge">0</span>)</button>
+        </div>
+
+        <div class="products-column">
             <div class="search-box">
                 <span>🔍</span>
                 <input id="search" placeholder="Cari produk..." />
@@ -493,7 +681,7 @@
             <div id="product-count" style="margin-top:18px;color:#475569;font-size:.95rem;"></div>
             <div id="products" class="card-grid" style="margin-top:16px"></div>
         </div>
-        <aside class="cart-panel">
+        <aside class="cart-panel cart-column hidden-mobile">
             <h3>Keranjang</h3>
             <div style="margin-bottom:12px;">
                 <label style="font-size:0.85rem; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Customer (Wajib)</label>
@@ -832,6 +1020,13 @@ async function loadProducts(){
 
 function showPage(page){
     setActiveMenu(page);
+    
+    // Close mobile sidebar if open
+    const sidebar = document.getElementById('sidebar-drawer');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    if (sidebar) sidebar.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('open');
+
     if(page === 'transaksi') {
         setPageHeader('Transaksi', 'Cari produk, tambah ke keranjang, lalu selesaikan pembayaran.', '+ Tambah Produk', false);
         renderTransaction();
@@ -1280,9 +1475,11 @@ function updateCartUI(){
     } = calculateCartTotal();
     
     const cartCount = document.getElementById('cart-count');
+    const mobileCartBadge = document.getElementById('mobile-cart-badge');
     const cartItems = document.getElementById('cart-items');
     const cartTotal = document.getElementById('cart-total');
     if(cartCount) cartCount.innerText = count;
+    if(mobileCartBadge) mobileCartBadge.innerText = count;
     if(cartTotal) {
         if (globalDiscountAmount > 0) {
             cartTotal.innerHTML = `<span style="font-size:0.9rem; text-decoration:line-through; color:#94a3b8; margin-right:8px;">${formatRupiah(subtotal)}</span><span>${formatRupiah(finalTotal)}</span>`;
@@ -1768,7 +1965,7 @@ function renderReports(){
                     <div class="value" id="items-sold">0 item</div>
                 </div>
             </div>
-            <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:18px;">
+            <div class="report-main-grid">
                 <div class="report-card">
                     <h3>Produk Terlaris</h3>
                     <div id="top-products"></div>
@@ -2909,6 +3106,15 @@ function pressPin(val) {
         }
     }
     updatePinDots();
+
+    // Auto submit PIN once 4 digits are typed
+    if (pinBuffer.length === 4) {
+        setTimeout(() => {
+            if (pinBuffer.length === 4) {
+                handleLogin();
+            }
+        }, 150);
+    }
 }
 
 function updatePinDots() {
@@ -3081,6 +3287,9 @@ function applyEmployeeRBAC() {
     
     const initials = CURRENT_EMPLOYEE.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
     avatarEl.innerText = initials;
+
+    const mobileAvatar = document.getElementById('mobile-avatar');
+    if (mobileAvatar) mobileAvatar.innerText = initials;
     
     const access = (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase();
     
@@ -3131,7 +3340,56 @@ function applyEmployeeRBAC() {
         menuOutlet.classList.add('hidden');
         menuLaporan.classList.add('hidden');
     }
+}function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar-drawer');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    if (sidebar && backdrop) {
+        sidebar.classList.toggle('open');
+        backdrop.classList.toggle('open');
+    }
 }
+
+function switchTxTab(tab) {
+    const productsCol = document.querySelector('.products-column');
+    const cartCol = document.querySelector('.cart-column');
+    const tabProducts = document.getElementById('tab-products');
+    const tabCart = document.getElementById('tab-cart');
+    
+    if (!productsCol || !cartCol || !tabProducts || !tabCart) return;
+    
+    if (tab === 'products') {
+        productsCol.classList.remove('hidden-mobile');
+        cartCol.classList.add('hidden-mobile');
+        tabProducts.classList.add('active');
+        tabCart.classList.remove('active');
+    } else {
+        productsCol.classList.add('hidden-mobile');
+        cartCol.classList.remove('hidden-mobile');
+        tabProducts.classList.remove('active');
+        tabCart.classList.add('active');
+    }
+}
+
+// Bind physical keyboard events for PIN entry
+document.addEventListener('keydown', e => {
+    const loginScreen = document.getElementById('login-screen');
+    if (loginScreen && !loginScreen.classList.contains('hidden')) {
+        // Focus check: do not intercept if typing inside input boxes (like the change pin inputs or form fields)
+        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT')) {
+            return;
+        }
+        if (e.key >= '0' && e.key <= '9') {
+            pressPin(e.key);
+        } else if (e.key === 'Backspace') {
+            pressPin('delete');
+        } else if (e.key === 'Escape' || e.key === 'Delete') {
+            pressPin('clear');
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            handleLogin();
+        }
+    }
+});
 
 window.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.menu-item').forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page)));
