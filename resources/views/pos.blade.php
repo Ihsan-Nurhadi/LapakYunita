@@ -596,7 +596,7 @@
     </div>
 </div>
 
-<div id="payment-modal" class="modal-backdrop hidden" onclick="closeModal(event)">
+<div id="payment-modal" class="modal-backdrop hidden" onclick="closePaymentModal(event)">
     <div class="modal-pane" onclick="event.stopPropagation()" style="max-width: 440px;">
         <h3 style="margin: 0 0 16px; font-size: 1.4rem; font-weight: 800; color: #0f172a;">Pembayaran</h3>
         <form id="payment-form">
@@ -658,8 +658,9 @@
             </div>
 
             <div class="modal-actions" style="margin-top: 24px;">
-                <button type="button" class="secondary-btn" onclick="closeModal()">Batal</button>
-                <button type="submit" class="primary-btn" id="confirm-payment-btn">Konfirmasi & Simpan</button>
+                <button type="button" class="secondary-btn" id="payment-cancel-btn" onclick="closeModal()">Batal</button>
+                <button type="button" class="secondary-btn" id="payment-save-draft-btn" onclick="saveDraft()">Simpan Draft</button>
+                <button type="submit" class="primary-btn" id="confirm-payment-btn">Konfirmasi Pembayaran</button>
             </div>
         </form>
     </div>
@@ -698,9 +699,8 @@
                 <div id="cart-discounts-container" style="display: flex; flex-direction: column; gap: 8px;"></div>
                 <div class="row total"><span>Total</span><strong id="cart-total">Rp 0</strong></div>
             </div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 14px;">
-                <button id="pay-btn" class="primary-btn" style="flex:1;">Bayar Sekarang</button>
-                <button id="save-draft-btn" class="secondary-btn" style="flex:1;">Simpan Draft</button>
+            <div style="margin-bottom: 14px;">
+                <button id="pay-btn" class="primary-btn" style="width:100%;">Bayar Sekarang</button>
             </div>
             <div style="margin-top:18px;">
                 <div style="font-weight:700; margin-bottom:10px; color:#0f172a;">Draft Transaksi</div>
@@ -1110,8 +1110,6 @@ function renderTransaction(){
     updateCartUI();
     loadDrafts();
     loadCustomers();
-    const saveDraftBtn = document.getElementById('save-draft-btn');
-    if (saveDraftBtn) saveDraftBtn.onclick = saveDraft;
 }
 
 function renderDraftPage(){
@@ -1162,6 +1160,7 @@ function saveDraft(){
     .then(async res => {
         if (!res.ok) throw new Error('Gagal menyimpan draft');
         const data = await res.json();
+        closeModal();
         showAlert('Draft berhasil disimpan.', 'Draft Disimpan', '✅', () => {
             CART = [];
             CURRENT_DRAFT_ID = null;
@@ -1549,6 +1548,16 @@ function processPayment(){
     
     updatePaymentChange();
     
+    const access = CURRENT_EMPLOYEE ? (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase() : '';
+    const cancelBtn = document.getElementById('payment-cancel-btn');
+    if (cancelBtn) {
+        if (access === 'kasir' || access === 'operator') {
+            cancelBtn.classList.add('hidden');
+        } else {
+            cancelBtn.classList.remove('hidden');
+        }
+    }
+
     document.getElementById('payment-modal').classList.remove('hidden');
     setTimeout(() => paidInput.focus(), 100);
 }
@@ -2371,6 +2380,16 @@ function exportReportToPdf() {
     }, 500);
 }
 
+
+function closePaymentModal(event){
+    if(event) event.stopPropagation();
+    const access = CURRENT_EMPLOYEE ? (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase() : '';
+    if (access === 'kasir' || access === 'operator') {
+        return;
+    }
+    const el = document.getElementById('payment-modal');
+    if(el) el.classList.add('hidden');
+}
 
 function closeModal(event){
     if(event) event.stopPropagation();
@@ -3340,7 +3359,18 @@ function applyEmployeeRBAC() {
         menuOutlet.classList.add('hidden');
         menuLaporan.classList.add('hidden');
     }
-}function toggleSidebar() {
+
+    const paymentCancelBtn = document.getElementById('payment-cancel-btn');
+    if (paymentCancelBtn) {
+        if (access === 'kasir' || access === 'operator') {
+            paymentCancelBtn.classList.add('hidden');
+        } else {
+            paymentCancelBtn.classList.remove('hidden');
+        }
+    }
+}
+
+function toggleSidebar() {
     const sidebar = document.getElementById('sidebar-drawer');
     const backdrop = document.getElementById('sidebar-backdrop');
     if (sidebar && backdrop) {
