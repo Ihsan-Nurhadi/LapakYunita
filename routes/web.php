@@ -23,6 +23,24 @@ use App\Http\Controllers\PosController;
 
 Route::get('/pos', [PosController::class, 'index']);
 
+Route::get('/run-migration-aiven', function () {
+    try {
+        $driver = \Illuminate\Support\Facades\DB::getDriverName();
+        if ($driver === 'mysql') {
+            \Illuminate\Support\Facades\DB::statement('ALTER TABLE products MODIFY image LONGTEXT NULL');
+            \Illuminate\Support\Facades\DB::statement('ALTER TABLE employees MODIFY photo LONGTEXT NULL');
+            \Illuminate\Support\Facades\DB::statement('ALTER TABLE outlets MODIFY image LONGTEXT NULL');
+        } elseif ($driver === 'pgsql') {
+            \Illuminate\Support\Facades\DB::statement('ALTER TABLE products ALTER COLUMN image TYPE TEXT');
+            \Illuminate\Support\Facades\DB::statement('ALTER TABLE employees ALTER COLUMN photo TYPE TEXT');
+            \Illuminate\Support\Facades\DB::statement('ALTER TABLE outlets ALTER COLUMN image TYPE TEXT');
+        }
+        return response()->json(['success' => true, 'message' => 'Migration Aiven Berhasil! Tipe kolom gambar telah diubah ke LONGTEXT/TEXT.']);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+});
+
 Route::prefix('pos/api')->group(function(){
     Route::post('login', [PosController::class, 'login']);
     Route::post('logout', [PosController::class, 'logout']);
