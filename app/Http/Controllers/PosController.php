@@ -79,7 +79,7 @@ class PosController extends Controller
         ]);
 
         if ($r->hasFile('image')) {
-            $data['image'] = $r->file('image')->store('products', 'public');
+            $data['image'] = $this->convertToBase64DataUrl($r->file('image'));
         }
 
         $product = Product::create($data);
@@ -111,7 +111,7 @@ class PosController extends Controller
         ]);
 
         if ($r->hasFile('image')) {
-            $data['image'] = $r->file('image')->store('products', 'public');
+            $data['image'] = $this->convertToBase64DataUrl($r->file('image'));
         } else {
             unset($data['image']);
         }
@@ -164,7 +164,7 @@ class PosController extends Controller
         $data['access'] = strtolower($data['role']);
 
         if ($r->hasFile('photo')) {
-            $data['photo'] = $r->file('photo')->store('employees', 'public');
+            $data['photo'] = $this->convertToBase64DataUrl($r->file('photo'));
         }
 
         return Employee::create($data);
@@ -185,7 +185,7 @@ class PosController extends Controller
         $data['access'] = strtolower($data['role']);
 
         if ($r->hasFile('photo')) {
-            $data['photo'] = $r->file('photo')->store('employees', 'public');
+            $data['photo'] = $this->convertToBase64DataUrl($r->file('photo'));
         } else {
             unset($data['photo']);
         }
@@ -216,7 +216,7 @@ class PosController extends Controller
         ]);
 
         if ($r->hasFile('image')) {
-            $data['image'] = $r->file('image')->store('outlets', 'public');
+            $data['image'] = $this->convertToBase64DataUrl($r->file('image'));
         }
 
         return Outlet::create($data);
@@ -234,13 +234,20 @@ class PosController extends Controller
         ]);
 
         if ($r->hasFile('image')) {
-            $data['image'] = $r->file('image')->store('outlets', 'public');
+            $data['image'] = $this->convertToBase64DataUrl($r->file('image'));
         } else {
             unset($data['image']);
         }
 
         $outlet->update($data);
         return $outlet;
+    }
+
+    private function convertToBase64DataUrl($file): string
+    {
+        $mime = $file->getMimeType() ?: 'image/jpeg';
+        $base64 = base64_encode(file_get_contents($file->getRealPath()));
+        return "data:{$mime};base64,{$base64}";
     }
 
     public function deleteOutlet(Outlet $outlet)

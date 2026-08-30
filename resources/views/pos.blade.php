@@ -938,7 +938,7 @@ const categoryIcon = cat => {
 
 const resolveImageUrl = image => {
     if (!image) return null;
-    if (image.startsWith('http://') || image.startsWith('https://')) return image;
+    if (image.startsWith('data:image/') || image.startsWith('http://') || image.startsWith('https://')) return image;
     return '/storage/' + image;
 };
 
