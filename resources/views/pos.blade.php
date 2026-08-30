@@ -1109,7 +1109,12 @@ function renderTransaction(){
     });
     updateCartUI();
     loadDrafts();
-    loadCustomers();
+    loadCustomers().then(() => {
+        const custSelect = document.getElementById('cart-customer-select');
+        if (custSelect && CURRENT_CUSTOMER_ID) {
+            custSelect.value = CURRENT_CUSTOMER_ID;
+        }
+    });
 }
 
 function renderDraftPage(){
@@ -1250,17 +1255,27 @@ function openDraft(id){
     }
     CURRENT_DRAFT_ID = draft.id;
     CURRENT_CUSTOMER_ID = draft.customer_id || null;
-    const customerSelect = document.getElementById('cart-customer-select');
-    if (customerSelect) customerSelect.value = CURRENT_CUSTOMER_ID || "";
 
-    CART = draft.items.map(item => ({
+    CART = (draft.items || []).map(item => ({
         id: item.product_id || 0,
         name: item.name,
         qty: item.qty,
         price: item.price
     }));
+
+    showPage('transaksi');
     updateCartUI();
-    if (document.getElementById('menu-transaksi')) document.getElementById('menu-transaksi').click();
+    
+    const customerSelect = document.getElementById('cart-customer-select');
+    if (customerSelect && CURRENT_CUSTOMER_ID) {
+        customerSelect.value = CURRENT_CUSTOMER_ID;
+    }
+
+    if (window.innerWidth <= 1024) {
+        switchTxTab('cart');
+    }
+
+    processPayment();
 }
 
 async function loadCustomers() {
@@ -1550,12 +1565,16 @@ function processPayment(){
     
     const access = CURRENT_EMPLOYEE ? (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase() : '';
     const cancelBtn = document.getElementById('payment-cancel-btn');
+    const saveDraftBtn = document.getElementById('payment-save-draft-btn');
     if (cancelBtn) {
         if (access === 'kasir' || access === 'operator') {
             cancelBtn.classList.add('hidden');
         } else {
             cancelBtn.classList.remove('hidden');
         }
+    }
+    if (saveDraftBtn) {
+        saveDraftBtn.classList.remove('hidden');
     }
 
     document.getElementById('payment-modal').classList.remove('hidden');
