@@ -101,6 +101,9 @@ Route::prefix('pos/api')->group(function(){
     Route::get('me', [PosController::class, 'me']);
     Route::get('employees', [PosController::class, 'employees']);
     Route::post('change-pin', [PosController::class, 'changePin']);
+    Route::get('products/{product}/image', [PosController::class, 'getProductImage']);
+    Route::get('employees/{employee}/photo', [PosController::class, 'getEmployeePhoto']);
+    Route::get('outlets/{outlet}/image', [PosController::class, 'getOutletImage']);
 });
 
 Route::prefix('pos/api')->middleware('employee.auth')->group(function(){

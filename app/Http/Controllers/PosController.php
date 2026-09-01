@@ -63,6 +63,9 @@ class PosController extends Controller
                     $product->outlet_id = null;
                 }
             }
+            if ($product->image) {
+                $product->image = "/pos/api/products/{$product->id}/image";
+            }
             return $product;
         });
     }
@@ -141,12 +144,22 @@ class PosController extends Controller
 
     public function employees()
     {
-        return Employee::with('outlet')->orderBy('name')->get();
+        return Employee::with('outlet')->orderBy('name')->get()->map(function($emp) {
+            if ($emp->photo) {
+                $emp->photo = "/pos/api/employees/{$emp->id}/photo";
+            }
+            return $emp;
+        });
     }
 
     public function outlets()
     {
-        return Outlet::with('employees')->orderBy('name')->get();
+        return Outlet::with('employees')->orderBy('name')->get()->map(function($out) {
+            if ($out->image) {
+                $out->image = "/pos/api/outlets/{$out->id}/image";
+            }
+            return $out;
+        });
     }
 
     public function storeEmployee(Request $r)
@@ -328,6 +341,99 @@ class PosController extends Controller
         $dataUrl = "data:{$mime};base64,{$base64}";
 
         return $this->compressDataUrl($dataUrl) ?: $dataUrl;
+    }
+
+    public function getProductImage(Product $product)
+    {
+        if (!$product->image) {
+            return response()->noContent(404);
+        }
+
+        if (str_starts_with($product->image, 'data:image/')) {
+            $parts = explode(',', $product->image, 2);
+            $header = $parts[0];
+            $base64 = $parts[1] ?? '';
+            
+            preg_match('/data:(image\/[a-zA-Z0-9\+\-\.]+);base64/', $header, $matches);
+            $mime = $matches[1] ?? 'image/jpeg';
+            
+            return response(base64_decode($base64))
+                ->header('Content-Type', $mime)
+                ->header('Cache-Control', 'public, max-age=86400');
+        }
+
+        if (str_starts_with($product->image, 'http://') || str_starts_with($product->image, 'https://')) {
+            return redirect($product->image);
+        }
+
+        $path = storage_path('app/public/' . $product->image);
+        if (file_exists($path)) {
+            return response()->file($path);
+        }
+
+        return response()->noContent(404);
+    }
+
+    public function getEmployeePhoto(Employee $employee)
+    {
+        if (!$employee->photo) {
+            return response()->noContent(404);
+        }
+
+        if (str_starts_with($employee->photo, 'data:image/')) {
+            $parts = explode(',', $employee->photo, 2);
+            $header = $parts[0];
+            $base64 = $parts[1] ?? '';
+            
+            preg_match('/data:(image\/[a-zA-Z0-9\+\-\.]+);base64/', $header, $matches);
+            $mime = $matches[1] ?? 'image/jpeg';
+            
+            return response(base64_decode($base64))
+                ->header('Content-Type', $mime)
+                ->header('Cache-Control', 'public, max-age=86400');
+        }
+
+        if (str_starts_with($employee->photo, 'http://') || str_starts_with($employee->photo, 'https://')) {
+            return redirect($employee->photo);
+        }
+
+        $path = storage_path('app/public/' . $employee->photo);
+        if (file_exists($path)) {
+            return response()->file($path);
+        }
+
+        return response()->noContent(404);
+    }
+
+    public function getOutletImage(Outlet $outlet)
+    {
+        if (!$outlet->image) {
+            return response()->noContent(404);
+        }
+
+        if (str_starts_with($outlet->image, 'data:image/')) {
+            $parts = explode(',', $outlet->image, 2);
+            $header = $parts[0];
+            $base64 = $parts[1] ?? '';
+            
+            preg_match('/data:(image\/[a-zA-Z0-9\+\-\.]+);base64/', $header, $matches);
+            $mime = $matches[1] ?? 'image/jpeg';
+            
+            return response(base64_decode($base64))
+                ->header('Content-Type', $mime)
+                ->header('Cache-Control', 'public, max-age=86400');
+        }
+
+        if (str_starts_with($outlet->image, 'http://') || str_starts_with($outlet->image, 'https://')) {
+            return redirect($outlet->image);
+        }
+
+        $path = storage_path('app/public/' . $outlet->image);
+        if (file_exists($path)) {
+            return response()->file($path);
+        }
+
+        return response()->noContent(404);
     }
 
     public function deleteOutlet(Outlet $outlet)
