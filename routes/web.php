@@ -41,6 +41,60 @@ Route::get('/run-migration-aiven', function () {
     }
 });
 
+Route::get('/compress-existing-images', function () {
+    try {
+        $controller = new \App\Http\Controllers\PosController();
+        $updatedProducts = 0;
+        $products = \App\Models\Product::where('image', 'LIKE', 'data:image/%')->get();
+        foreach ($products as $p) {
+            $oldLen = strlen($p->image);
+            if ($oldLen > 30000) {
+                $newImage = $controller->compressDataUrl($p->image);
+                if ($newImage && strlen($newImage) < $oldLen) {
+                    $p->image = $newImage;
+                    $p->save();
+                    $updatedProducts++;
+                }
+            }
+        }
+
+        $updatedEmployees = 0;
+        $employees = \App\Models\Employee::where('photo', 'LIKE', 'data:image/%')->get();
+        foreach ($employees as $e) {
+            $oldLen = strlen($e->photo);
+            if ($oldLen > 30000) {
+                $newPhoto = $controller->compressDataUrl($e->photo);
+                if ($newPhoto && strlen($newPhoto) < $oldLen) {
+                    $e->photo = $newPhoto;
+                    $e->save();
+                    $updatedEmployees++;
+                }
+            }
+        }
+
+        $updatedOutlets = 0;
+        $outlets = \App\Models\Outlet::where('image', 'LIKE', 'data:image/%')->get();
+        foreach ($outlets as $o) {
+            $oldLen = strlen($o->image);
+            if ($oldLen > 30000) {
+                $newImage = $controller->compressDataUrl($o->image);
+                if ($newImage && strlen($newImage) < $oldLen) {
+                    $o->image = $newImage;
+                    $o->save();
+                    $updatedOutlets++;
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Kompresi selesai! Produk terkompresi: {$updatedProducts}, Pegawai: {$updatedEmployees}, Outlet: {$updatedOutlets}."
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+});
+
 Route::prefix('pos/api')->group(function(){
     Route::post('login', [PosController::class, 'login']);
     Route::post('logout', [PosController::class, 'logout']);

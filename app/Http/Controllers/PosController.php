@@ -243,11 +243,91 @@ class PosController extends Controller
         return $outlet;
     }
 
+    public function compressDataUrl(?string $dataUrl): ?string
+    {
+        if (!$dataUrl || !str_starts_with($dataUrl, 'data:image/')) {
+            return $dataUrl;
+        }
+
+        if (strlen($dataUrl) < 40000) {
+            return $dataUrl;
+        }
+
+        if (!function_exists('imagecreatefromstring')) {
+            return $dataUrl;
+        }
+
+        try {
+            $parts = explode(',', $dataUrl, 2);
+            if (count($parts) < 2) return $dataUrl;
+
+            $header = $parts[0];
+            $base64Data = $parts[1];
+            $rawData = base64_decode($base64Data);
+            if (!$rawData) return $dataUrl;
+
+            $srcImage = @imagecreatefromstring($rawData);
+            if (!$srcImage) return $dataUrl;
+
+            $origWidth = imagesx($srcImage);
+            $origHeight = imagesy($srcImage);
+
+            $maxDim = 350;
+            if ($origWidth > $maxDim || $origHeight > $maxDim) {
+                if ($origWidth > $origHeight) {
+                    $newWidth = $maxDim;
+                    $newHeight = (int) max(1, $origHeight * ($maxDim / $origWidth));
+                } else {
+                    $newHeight = $maxDim;
+                    $newWidth = (int) max(1, $origWidth * ($maxDim / $origHeight));
+                }
+            } else {
+                $newWidth = $origWidth;
+                $newHeight = $origHeight;
+            }
+
+            $dstImage = imagecreatetruecolor($newWidth, $newHeight);
+
+            if (str_contains($header, 'png') || str_contains($header, 'webp')) {
+                imagealphablending($dstImage, false);
+                imagesavealpha($dstImage, true);
+            }
+
+            imagecopyresampled($dstImage, $srcImage, 0, 0, 0, 0, $newWidth, $newHeight, $origWidth, $origHeight);
+
+            ob_start();
+            if (str_contains($header, 'png')) {
+                imagepng($dstImage, null, 7);
+            } elseif (str_contains($header, 'webp')) {
+                imagewebp($dstImage, null, 75);
+            } else {
+                imagejpeg($dstImage, null, 75);
+            }
+            $compressedRaw = ob_get_clean();
+
+            imagedestroy($srcImage);
+            imagedestroy($dstImage);
+
+            if ($compressedRaw && strlen($compressedRaw) < strlen($rawData)) {
+                $mime = str_contains($header, 'png') ? 'image/png' : (str_contains($header, 'webp') ? 'image/webp' : 'image/jpeg');
+                return "data:{$mime};base64," . base64_encode($compressedRaw);
+            }
+        } catch (\Throwable $e) {
+            // fallback
+        }
+
+        return $dataUrl;
+    }
+
     private function convertToBase64DataUrl($file): string
     {
         $mime = $file->getMimeType() ?: 'image/jpeg';
-        $base64 = base64_encode(file_get_contents($file->getRealPath()));
-        return "data:{$mime};base64,{$base64}";
+        $realPath = $file->getRealPath();
+        $rawData = file_get_contents($realPath);
+        $base64 = base64_encode($rawData);
+        $dataUrl = "data:{$mime};base64,{$base64}";
+
+        return $this->compressDataUrl($dataUrl) ?: $dataUrl;
     }
 
     public function deleteOutlet(Outlet $outlet)
