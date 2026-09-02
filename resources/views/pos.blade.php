@@ -502,8 +502,10 @@
             <input type="text" name="category" id="field-category" placeholder="Makanan, Minuman, Snack" />
             <label>Harga Jual</label>
             <input type="number" name="price" id="field-price" required />
-            <label>Harga Modal</label>
-            <input type="number" name="modal" id="field-modal" />
+            <div id="row-field-modal">
+                <label>Harga Modal</label>
+                <input type="number" name="modal" id="field-modal" />
+            </div>
             <label>Stok per Cabang / Outlet</label>
             <div id="outlet-stocks-container" style="display:flex; flex-direction:column; gap:12px; margin-top:8px; background:#f8fafc; border:1px solid rgba(15,23,42,.08); border-radius:16px; padding:16px; max-height:220px; overflow-y:auto;">
                 <!-- Dinamis diisi lewat JavaScript -->
@@ -600,9 +602,14 @@
     <div class="modal-pane" onclick="event.stopPropagation()" style="max-width: 440px;">
         <h3 style="margin: 0 0 16px; font-size: 1.4rem; font-weight: 800; color: #0f172a;">Pembayaran</h3>
         <form id="payment-form">
-            <div style="background: #f8fafc; border-radius: 16px; padding: 16px; margin-bottom: 20px; border: 1px solid rgba(15,23,42,.06); display: flex; justify-content: space-between; align-items: center;">
+            <div style="background: #f8fafc; border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(15,23,42,.06); display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: #475569; font-weight: 600;">Total Tagihan:</span>
                 <strong id="payment-total-label" style="font-size: 1.4rem; color: #0f172a; font-weight: 800;">Rp 0</strong>
+            </div>
+
+            <div id="payment-items-container" style="background: #f8fafc; border-radius: 16px; padding: 14px; margin-bottom: 16px; border: 1px solid rgba(15,23,42,.06); max-height: 160px; overflow-y: auto;">
+                <div style="font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 8px; border-bottom: 1px dashed rgba(15,23,42,.1); padding-bottom: 4px;">Rincian Produk Pembelian:</div>
+                <div id="payment-items-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
             </div>
             
             <label for="payment-method-select" style="display: block; font-size: .9rem; font-weight: 600; color: #475569; margin-bottom: 8px;">Metode Pembayaran</label>
@@ -1057,11 +1064,25 @@ function showPage(page){
 function renderTransaction(){
     document.getElementById('page-content').innerHTML = document.getElementById('tpl-transaksi').innerHTML;
     loadProducts().then(() => {
+        const access = CURRENT_EMPLOYEE ? (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase() : '';
+        const isAdmin = (access === 'admin');
         const container = document.getElementById('products');
         const productCount = document.getElementById('product-count');
         productCount.innerText = `${PRODUCTS.length} produk tersedia`;
         const renderList = list => {
-            container.innerHTML = list.map(p => `
+            container.innerHTML = list.map(p => {
+                const statsHtml = isAdmin ? `
+                    <div class="stats" style="grid-template-columns: repeat(2, 1fr); margin-top:8px;">
+                        <div class="stat"><span>Harga Modal</span><strong>${formatRupiah(p.modal || 0)}</strong></div>
+                        <div class="stat"><span>Stok</span><strong>${p.stock ?? 0}</strong></div>
+                    </div>
+                ` : `
+                    <div class="stats" style="grid-template-columns: repeat(1, 1fr); margin-top:8px;">
+                        <div class="stat"><span>Stok</span><strong>${p.stock ?? 0}</strong></div>
+                    </div>
+                `;
+
+                return `
                 <article class="product-card">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
                         <span style="font-size: 0.8rem; font-weight: bold; background: #f1f5f9; color: #64748b; padding: 4px 10px; border-radius: 999px; font-family: monospace;">ID: ${formatCustomId(p.id, 'product')}</span>
@@ -1083,13 +1104,11 @@ function renderTransaction(){
                             }
                         </div>
                     </div>
-                    <div class="stats" style="grid-template-columns: repeat(2, 1fr); margin-top:8px;">
-                        <div class="stat"><span>Harga Modal</span><strong>${formatRupiah(p.modal || 0)}</strong></div>
-                        <div class="stat"><span>Stok</span><strong>${p.stock ?? 0}</strong></div>
-                    </div>
+                    ${statsHtml}
                     <button class="secondary-btn" style="width:100%;" onclick="addToCart(${p.id})">Tambah ke Keranjang</button>
                 </article>
-            `).join('');
+                `;
+            }).join('');
         };
         renderList(PRODUCTS);
         document.getElementById('search').addEventListener('input', e => {
@@ -1201,6 +1220,9 @@ function renderDraftList(filteredDrafts = DRAFTS){
         return;
     }
 
+    const access = CURRENT_EMPLOYEE ? (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase() : '';
+    const canDeleteDraft = (access === 'supervisor');
+
     listContainer.innerHTML = filteredDrafts.map(draft => {
         const date = new Date(draft.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
         return `
@@ -1212,15 +1234,21 @@ function renderDraftList(filteredDrafts = DRAFTS){
                     </div>
                     <span style="font-weight:700; color:#16a34a; font-size:0.95rem;">${formatRupiah(draft.total)}</span>
                 </button>
+                ${canDeleteDraft ? `
                 <button type="button" class="secondary-btn btn-delete" style="padding:10px 14px; display:grid; place-items:center; border-radius:12px; font-size:1.1rem; cursor:pointer;" onclick="event.stopPropagation(); deleteDraftConfirm(${draft.id})" title="Hapus Draft">
                     🗑️
                 </button>
+                ` : ''}
             </div>
         `;
     }).join('');
 }
 
 function deleteDraftConfirm(id) {
+    const access = CURRENT_EMPLOYEE ? (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase() : '';
+    if (access === 'kasir' || access === 'operator') {
+        return showAlert('Kasir tidak memiliki wewenang untuk menghapus draft.', 'Akses Ditolak', '⚠️');
+    }
     if (confirm('Apakah Anda yakin ingin menghapus draft ini?')) {
         fetch(`/pos/api/drafts/${id}`, {
             method: 'DELETE',
@@ -1550,6 +1578,17 @@ function processPayment(){
     const { finalTotal } = calculateCartTotal();
     
     document.getElementById('payment-total-label').innerText = formatRupiah(finalTotal);
+    
+    const itemsList = document.getElementById('payment-items-list');
+    if (itemsList) {
+        itemsList.innerHTML = CART.map(item => `
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; border-bottom: 1px dashed rgba(15,23,42,.05); padding-bottom: 4px;">
+                <div style="color: #0f172a; font-weight: 600;">${item.name} <span style="color: #64748b; font-weight: normal;">x${item.qty}</span></div>
+                <div style="color: #10b981; font-weight: 700;">${formatRupiah(item.qty * item.price)}</div>
+            </div>
+        `).join('');
+    }
+    
     const paidInput = document.getElementById('payment-paid-input');
     paidInput.value = finalTotal;
     paidInput.readOnly = false;
@@ -1585,6 +1624,8 @@ function renderProductsAdmin(){
     document.getElementById('page-content').innerHTML = document.getElementById('tpl-produk').innerHTML;
     fetch('/pos/api/products').then(r=>r.json()).then(data => {
         PRODUCTS = data;
+        const access = CURRENT_EMPLOYEE ? (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase() : '';
+        const isAdmin = (access === 'admin');
         const container = document.getElementById('products-admin');
         const renderList = list => {
             container.innerHTML = list.length ? list.map(p => {
@@ -1596,6 +1637,17 @@ function renderProductsAdmin(){
                 } else {
                     outletsHtml = `<span class="tag" style="background:#f1f5f9; color:#64748b; font-size: 0.8rem; padding: 2px 6px; display:inline-block; margin-top:2px;">Belum ada cabang</span>`;
                 }
+
+                const statsHtml = isAdmin ? `
+                    <div class="stats" style="grid-template-columns: repeat(2, 1fr); margin-top:8px;">
+                        <div class="stat"><span>Harga Modal</span><strong>${formatRupiah(p.modal || 0)}</strong></div>
+                        <div class="stat"><span>Total Stok</span><strong>${p.stock ?? 0}</strong></div>
+                    </div>
+                ` : `
+                    <div class="stats" style="grid-template-columns: repeat(1, 1fr); margin-top:8px;">
+                        <div class="stat"><span>Total Stok</span><strong>${p.stock ?? 0}</strong></div>
+                    </div>
+                `;
 
                 return `
                     <article class="product-card" style="display:flex; flex-direction:column; min-height: 310px;">
@@ -1612,10 +1664,7 @@ function renderProductsAdmin(){
                             <h3>${p.name}</h3>
                             <p style="color:#64748b; margin:8px 0 0;">Harga Jual ${formatRupiah(p.price)}</p>
                         </div>
-                        <div class="stats" style="grid-template-columns: repeat(2, 1fr); margin-top:8px;">
-                            <div class="stat"><span>Harga Modal</span><strong>${formatRupiah(p.modal || 0)}</strong></div>
-                            <div class="stat"><span>Total Stok</span><strong>${p.stock ?? 0}</strong></div>
-                        </div>
+                        ${statsHtml}
                         <div style="margin-top: 8px; font-size: 0.85rem; color: #475569; border-top: 1px dashed rgba(0,0,0,0.05); padding-top: 8px;">
                             <div style="font-weight:700; margin-bottom: 8px;">Cabang & Stok:</div>
                             <div class="outlet-stock-list">
@@ -2801,6 +2850,14 @@ function openAddProduct(){
     document.getElementById('field-modal').value = '';
     document.getElementById('field-image').value = '';
     
+    const access = CURRENT_EMPLOYEE ? (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase() : '';
+    const isAdmin = (access === 'admin');
+    const modalRow = document.getElementById('row-field-modal');
+    if (modalRow) {
+        if (isAdmin) modalRow.classList.remove('hidden');
+        else modalRow.classList.add('hidden');
+    }
+    
     const container = document.getElementById('outlet-stocks-container');
     container.innerHTML = OUTLETS.map(out => `
         <div class="outlet-stock-row" style="display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom: 1px solid rgba(0,0,0,0.02); padding-bottom: 8px;">
@@ -2841,6 +2898,14 @@ function openEditProduct(productId){
     document.getElementById('field-price').value = product.price || '';
     document.getElementById('field-modal').value = product.modal || '';
     document.getElementById('field-image').value = '';
+    
+    const access = CURRENT_EMPLOYEE ? (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase() : '';
+    const isAdmin = (access === 'admin');
+    const modalRow = document.getElementById('row-field-modal');
+    if (modalRow) {
+        if (isAdmin) modalRow.classList.remove('hidden');
+        else modalRow.classList.add('hidden');
+    }
     
     const container = document.getElementById('outlet-stocks-container');
     container.innerHTML = OUTLETS.map(out => {
@@ -2972,9 +3037,12 @@ function showInvoice(tx){
     const itemsContainer = document.getElementById('invoice-items');
     if(tx.items && tx.items.length) {
         itemsContainer.innerHTML = tx.items.map(item => `
-            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                <div>${item.name} x${item.qty}</div>
-                <div>${formatRupiah(item.qty * item.price)}</div>
+            <div style="margin-bottom: 8px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px;">
+                <div style="font-weight: 700; color: #0f172a; font-size: 0.95rem; margin-bottom: 2px;">${item.name}</div>
+                <div style="display: flex; justify-content: space-between; color: #475569; font-size: 0.88rem;">
+                    <span>${item.qty} x ${formatRupiah(item.price)}</span>
+                    <span style="font-weight: 700; color: #0f172a;">${formatRupiah(item.qty * item.price)}</span>
+                </div>
             </div>
         `).join('');
     } else {

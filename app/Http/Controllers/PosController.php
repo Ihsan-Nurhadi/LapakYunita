@@ -623,6 +623,14 @@ class PosController extends Controller
 
     public function deleteDraft(PosTransaction $draft)
     {
+        $employeeId = session('employee_id');
+        if ($employeeId) {
+            $employee = Employee::find($employeeId);
+            if ($employee && in_array(strtolower($employee->access ?: $employee->role), ['kasir', 'operator'])) {
+                return response()->json(['message' => 'Kasir tidak memiliki wewenang untuk menghapus draft.'], 403);
+            }
+        }
+
         if (!$draft->is_draft) {
             return response()->json(['message' => 'Hanya draft yang dapat dihapus.'], 422);
         }
