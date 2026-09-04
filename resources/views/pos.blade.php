@@ -1090,6 +1090,10 @@ function showPage(page){
         setPageHeader('Badge Pelanggan', 'Tentukan minimal belanja, emoji badge, dan persentase diskon untuk masing-masing tier pelanggan.', '', false);
         renderBadgePage();
     } else if(page === 'price-rules') {
+        const access = CURRENT_EMPLOYEE ? (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase() : '';
+        if (access !== 'admin') {
+            return showAlert('Halaman Aturan Harga Berat hanya dapat diakses oleh Admin.', 'Akses Ditolak', '⚠️');
+        }
         setPageHeader('Aturan Harga Berat', 'Atur penambahan harga (margin) otomatis berdasarkan range berat produk.', '+ Tambah Aturan', true, openAddPriceRuleModal);
         renderPriceRulesAdmin();
     } else if(page === 'outlet') {
@@ -3466,6 +3470,7 @@ function applyEmployeeRBAC() {
     const menuPegawai = document.getElementById('menu-pegawai');
     const menuPelanggan = document.getElementById('menu-pelanggan');
     const menuBadge = document.getElementById('menu-badge');
+    const menuPriceRules = document.getElementById('menu-price-rules');
     const menuOutlet = document.getElementById('menu-outlet');
     const menuLaporan = document.getElementById('menu-laporan');
     
@@ -3476,6 +3481,7 @@ function applyEmployeeRBAC() {
         menuPegawai.classList.remove('hidden');
         menuPelanggan.classList.remove('hidden');
         if (menuBadge) menuBadge.classList.remove('hidden');
+        if (menuPriceRules) menuPriceRules.classList.remove('hidden');
         menuOutlet.classList.remove('hidden');
         menuLaporan.classList.remove('hidden');
     } else if (access === 'supervisor') {
@@ -3485,6 +3491,7 @@ function applyEmployeeRBAC() {
         menuPegawai.classList.add('hidden');
         menuPelanggan.classList.remove('hidden');
         if (menuBadge) menuBadge.classList.add('hidden');
+        if (menuPriceRules) menuPriceRules.classList.add('hidden');
         menuOutlet.classList.add('hidden');
         menuLaporan.classList.remove('hidden');
     } else {
@@ -3494,6 +3501,7 @@ function applyEmployeeRBAC() {
         menuPegawai.classList.add('hidden');
         menuPelanggan.classList.remove('hidden');
         if (menuBadge) menuBadge.classList.add('hidden');
+        if (menuPriceRules) menuPriceRules.classList.add('hidden');
         menuOutlet.classList.add('hidden');
         menuLaporan.classList.add('hidden');
     }
