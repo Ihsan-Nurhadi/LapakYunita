@@ -76,6 +76,7 @@ class PosController extends Controller
             'name' => 'required|string',
             'price' => 'required|integer',
             'modal' => 'nullable|integer',
+            'weight' => 'nullable|integer',
             'category' => 'nullable|string',
             'image' => 'nullable|image|max:2048',
             'outlet_stocks' => 'nullable|string',
@@ -108,6 +109,7 @@ class PosController extends Controller
             'name' => 'required|string',
             'price' => 'required|integer',
             'modal' => 'nullable|integer',
+            'weight' => 'nullable|integer',
             'category' => 'nullable|string',
             'image' => 'nullable|image|max:2048',
             'outlet_stocks' => 'nullable|string',
@@ -528,6 +530,34 @@ class PosController extends Controller
     {
         $customer->delete();
         return response()->json(['message' => 'Customer deleted successfully']);
+    }
+
+    public function priceRules()
+    {
+        return \App\Models\PriceRule::orderBy('min_weight')->get();
+    }
+
+    public function savePriceRules(Request $r)
+    {
+        $rules = $r->validate([
+            'rules' => 'required|array',
+            'rules.*.min_weight' => 'required|integer|min:0',
+            'rules.*.max_weight' => 'required|integer|min:0',
+            'rules.*.markup_price' => 'required|integer|min:0',
+        ]);
+
+        \App\Models\PriceRule::query()->delete();
+        foreach ($rules['rules'] as $ruleData) {
+            \App\Models\PriceRule::create($ruleData);
+        }
+
+        return response()->json(['message' => 'Aturan harga berat berhasil disimpan.']);
+    }
+
+    public function deletePriceRule(\App\Models\PriceRule $priceRule)
+    {
+        $priceRule->delete();
+        return response()->json(['message' => 'Aturan harga berhasil dihapus.']);
     }
 
     public function customerTiers()

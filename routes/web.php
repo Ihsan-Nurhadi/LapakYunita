@@ -41,6 +41,35 @@ Route::get('/run-migration-aiven', function () {
     }
 });
 
+Route::get('/run-migration-price-rules', function () {
+    try {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('price_rules')) {
+            \Illuminate\Support\Facades\Schema::create('price_rules', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $table->id();
+                $table->integer('min_weight')->default(0);
+                $table->integer('max_weight')->default(0);
+                $table->integer('markup_price')->default(0);
+                $table->timestamps();
+            });
+
+            \Illuminate\Support\Facades\DB::table('price_rules')->insert([
+                ['min_weight' => 1, 'max_weight' => 500, 'markup_price' => 12000, 'created_at' => now(), 'updated_at' => now()],
+                ['min_weight' => 501, 'max_weight' => 900, 'markup_price' => 16500, 'created_at' => now(), 'updated_at' => now()],
+            ]);
+        }
+
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('products', 'weight')) {
+            \Illuminate\Support\Facades\Schema::table('products', function (\Illuminate\Database\Schema\Blueprint $table) {
+                $table->integer('weight')->nullable()->default(0);
+            });
+        }
+
+        return response()->json(['success' => true, 'message' => 'Migration Aiven Price Rules Berhasil! Tabel price_rules & kolom weight telah ditambahkan.']);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+    }
+});
+
 Route::get('/compress-existing-images', function () {
     try {
         $controller = new \App\Http\Controllers\PosController();
@@ -125,6 +154,10 @@ Route::prefix('pos/api')->middleware('employee.auth')->group(function(){
     Route::delete('customers/{customer}', [PosController::class, 'destroyCustomer']);
     Route::get('customer-tiers', [PosController::class, 'customerTiers']);
     Route::post('customer-tiers', [PosController::class, 'saveCustomerTiers'])->middleware('employee.auth:admin');
+
+    Route::get('price-rules', [PosController::class, 'priceRules']);
+    Route::post('price-rules', [PosController::class, 'savePriceRules'])->middleware('employee.auth:admin');
+    Route::delete('price-rules/{priceRule}', [PosController::class, 'deletePriceRule'])->middleware('employee.auth:admin');
 
     Route::get('outlets', [PosController::class, 'outlets']);
     Route::post('outlets', [PosController::class, 'storeOutlet'])->middleware('employee.auth:admin');

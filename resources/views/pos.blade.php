@@ -435,6 +435,7 @@
             <button class="menu-item" id="menu-pegawai" data-page="pegawai">👥 Pegawai</button>
             <button class="menu-item" id="menu-pelanggan" data-page="pelanggan">⭐ Pelanggan</button>
             <button class="menu-item" id="menu-badge" data-page="badge">🎖️ Badge & tier pelanggan</button>
+            <button class="menu-item" id="menu-price-rules" data-page="price-rules">⚖️ Aturan Harga Berat</button>
             <button class="menu-item" id="menu-outlet" data-page="outlet">🏪 Outlet</button>
             <button class="menu-item" id="menu-laporan" data-page="laporan">📊 Laporan</button>
         </nav>
@@ -500,11 +501,16 @@
             <input type="text" name="name" id="field-name" required />
             <label>Kategori</label>
             <input type="text" name="category" id="field-category" placeholder="Makanan, Minuman, Snack" />
-            <label>Harga Jual</label>
-            <input type="number" name="price" id="field-price" required />
+            <label>Harga Jual (Otomatis Dihitung)</label>
+            <input type="number" name="price" id="field-price" required readonly placeholder="Otomatis dari Modal + Margin Berat" style="background:#f1f5f9; color:#0f172a; font-weight:700; cursor:not-allowed;" />
             <div id="row-field-modal">
                 <label>Harga Modal</label>
-                <input type="number" name="modal" id="field-modal" />
+                <input type="number" name="modal" id="field-modal" placeholder="0" />
+            </div>
+            <div id="row-field-weight">
+                <label>Berat Produk (gram)</label>
+                <input type="number" name="weight" id="field-weight" placeholder="Contoh: 500" min="0" />
+                <small id="weight-calc-hint" style="display:block; color:#10b981; font-weight:600; margin-top:4px; font-size:0.85rem;"></small>
             </div>
             <label>Stok per Cabang / Outlet</label>
             <div id="outlet-stocks-container" style="display:flex; flex-direction:column; gap:12px; margin-top:8px; background:#f8fafc; border:1px solid rgba(15,23,42,.08); border-radius:16px; padding:16px; max-height:220px; overflow-y:auto;">
@@ -781,6 +787,40 @@
     </div>
 </template>
 
+<template id="tpl-price-rules">
+    <div style="max-width: 750px; background: #fff; border: 1px solid rgba(15,23,42,.08); padding: 24px; border-radius: 24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <div>
+                <h3 style="margin:0; font-size:1.1rem; color:#0f172a;">Aturan Margin Harga berdasarkan Berat</h3>
+                <p style="margin:4px 0 0; color:#64748b; font-size:0.88rem;">Tambahkan range berat produk (gram) dan besaran margin/mark-up harga jual otomatis.</p>
+            </div>
+            <button type="button" class="primary-btn" onclick="openAddPriceRuleModal()">+ Tambah Aturan</button>
+        </div>
+        <div id="price-rules-list-container" style="display:flex; flex-direction:column; gap:12px; margin-bottom: 20px;">
+            <!-- Dinamis diisi lewat JavaScript -->
+        </div>
+    </div>
+</template>
+
+<div id="price-rule-modal" class="modal-backdrop hidden" onclick="closeModal(event)">
+    <div class="modal-pane" onclick="event.stopPropagation()" style="max-width: 440px;">
+        <h3 id="price-rule-modal-title">Tambah Aturan Harga Berat</h3>
+        <form id="price-rule-form">
+            <input type="hidden" id="price-rule-index" value="-1" />
+            <label>Minimal Berat (gram)</label>
+            <input type="number" id="rule-min-weight" required min="0" placeholder="Contoh: 1" />
+            <label>Maksimal Berat (gram)</label>
+            <input type="number" id="rule-max-weight" required min="0" placeholder="Contoh: 500" />
+            <label>Tambahan Margin / Mark-up (Rp)</label>
+            <input type="number" id="rule-markup-price" required min="0" placeholder="Contoh: 12000" />
+            <div class="modal-actions">
+                <button type="button" class="secondary-btn" onclick="closeModal()">Batal</button>
+                <button type="submit" class="primary-btn">Simpan Aturan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div id="employee-modal" class="modal-backdrop hidden" onclick="closeModal(event)">
     <div class="modal-pane" onclick="event.stopPropagation()">
         <h3>Tambah Pegawai</h3>
@@ -1049,6 +1089,9 @@ function showPage(page){
     } else if(page === 'badge') {
         setPageHeader('Badge Pelanggan', 'Tentukan minimal belanja, emoji badge, dan persentase diskon untuk masing-masing tier pelanggan.', '', false);
         renderBadgePage();
+    } else if(page === 'price-rules') {
+        setPageHeader('Aturan Harga Berat', 'Atur penambahan harga (margin) otomatis berdasarkan range berat produk.', '+ Tambah Aturan', true, openAddPriceRuleModal);
+        renderPriceRulesAdmin();
     } else if(page === 'outlet') {
         setPageHeader('Outlet', 'Lihat daftar outlet, alamat, dan kontak.', '+ Tambah Outlet', true, openAddOutlet, true, openGlobalDiscountModal, 'Buat Diskon');
         renderOutlets();
@@ -2469,7 +2512,8 @@ function closeModal(event){
         'payment-modal',
         'change-pin-modal',
         'global-discount-modal',
-        'customer-modal'
+        'customer-modal',
+        'price-rule-modal'
     ];
     modals.forEach(id => {
         const el = document.getElementById(id);
@@ -2848,7 +2892,10 @@ function openAddProduct(){
     document.getElementById('field-category').value = '';
     document.getElementById('field-price').value = '';
     document.getElementById('field-modal').value = '';
+    document.getElementById('field-weight').value = '';
+    document.getElementById('weight-calc-hint').innerText = '';
     document.getElementById('field-image').value = '';
+    loadPriceRules();
     
     const access = CURRENT_EMPLOYEE ? (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase() : '';
     const isAdmin = (access === 'admin');
@@ -2897,7 +2944,10 @@ function openEditProduct(productId){
     document.getElementById('field-category').value = product.category || '';
     document.getElementById('field-price').value = product.price || '';
     document.getElementById('field-modal').value = product.modal || '';
+    document.getElementById('field-weight').value = product.weight || '';
+    document.getElementById('weight-calc-hint').innerText = '';
     document.getElementById('field-image').value = '';
+    loadPriceRules();
     
     const access = CURRENT_EMPLOYEE ? (CURRENT_EMPLOYEE.access || CURRENT_EMPLOYEE.role || '').toLowerCase() : '';
     const isAdmin = (access === 'admin');
@@ -2953,6 +3003,7 @@ function bindProductForm(){
         formData.append('category', document.getElementById('field-category').value.trim());
         formData.append('price', parseInt(document.getElementById('field-price').value, 10) || 0);
         formData.append('modal', parseInt(document.getElementById('field-modal').value, 10) || 0);
+        formData.append('weight', parseInt(document.getElementById('field-weight').value, 10) || 0);
         
         // Collect multi-outlet stocks
         const outletStocks = [];
@@ -3508,6 +3559,156 @@ document.addEventListener('keydown', e => {
     }
 });
 
+let PRICE_RULES = [];
+
+function loadPriceRules() {
+    return fetch('/pos/api/price-rules')
+        .then(r => r.json())
+        .then(data => {
+            PRICE_RULES = Array.isArray(data) ? data : [];
+            return PRICE_RULES;
+        })
+        .catch(e => {
+            console.error("Error loading price rules:", e);
+            PRICE_RULES = [];
+            return PRICE_RULES;
+        });
+}
+
+function renderPriceRulesAdmin() {
+    document.getElementById('page-content').innerHTML = document.getElementById('tpl-price-rules').innerHTML;
+    bindPriceRuleForm();
+    loadPriceRules().then(rules => {
+        renderPriceRulesList(rules);
+    });
+}
+
+function renderPriceRulesList(rules) {
+    const container = document.getElementById('price-rules-list-container');
+    if (!container) return;
+    if (!rules.length) {
+        container.innerHTML = '<div style="color:#64748b; font-size:.95rem; text-align:center; padding:16px;">Belum ada aturan harga berat. Klik "+ Tambah Aturan" untuk menambahkan.</div>';
+        return;
+    }
+
+    container.innerHTML = rules.map((r, index) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid rgba(15,23,42,0.06); padding:14px 18px; border-radius:16px;">
+            <div>
+                <span style="font-weight:700; color:#0f172a; font-size:1rem;">Range Berat: ${r.min_weight} - ${r.max_weight} gram</span>
+                <div style="font-size:0.88rem; color:#10b981; font-weight:600; margin-top:2px;">Tambahan Margin: + ${formatRupiah(r.markup_price)}</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button type="button" class="btn-edit" onclick="openEditPriceRuleModal(${index})">Edit</button>
+                <button type="button" class="btn-delete" onclick="deletePriceRuleAction(${r.id})">Hapus</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function openAddPriceRuleModal() {
+    document.getElementById('price-rule-modal-title').innerText = 'Tambah Aturan Harga Berat';
+    document.getElementById('price-rule-index').value = -1;
+    document.getElementById('rule-min-weight').value = '';
+    document.getElementById('rule-max-weight').value = '';
+    document.getElementById('rule-markup-price').value = '';
+    document.getElementById('price-rule-modal').classList.remove('hidden');
+}
+
+function openEditPriceRuleModal(index) {
+    const rule = PRICE_RULES[index];
+    if (!rule) return;
+    document.getElementById('price-rule-modal-title').innerText = 'Edit Aturan Harga Berat';
+    document.getElementById('price-rule-index').value = index;
+    document.getElementById('rule-min-weight').value = rule.min_weight;
+    document.getElementById('rule-max-weight').value = rule.max_weight;
+    document.getElementById('rule-markup-price').value = rule.markup_price;
+    document.getElementById('price-rule-modal').classList.remove('hidden');
+}
+
+function bindPriceRuleForm() {
+    const form = document.getElementById('price-rule-form');
+    if (!form || form.dataset.bound) return;
+    form.dataset.bound = 'true';
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const index = parseInt(document.getElementById('price-rule-index').value, 10);
+        const minW = parseInt(document.getElementById('rule-min-weight').value, 10) || 0;
+        const maxW = parseInt(document.getElementById('rule-max-weight').value, 10) || 0;
+        const markup = parseInt(document.getElementById('rule-markup-price').value, 10) || 0;
+
+        let updatedRules = [...PRICE_RULES];
+        if (index >= 0 && index < updatedRules.length) {
+            updatedRules[index] = { min_weight: minW, max_weight: maxW, markup_price: markup };
+        } else {
+            updatedRules.push({ min_weight: minW, max_weight: maxW, markup_price: markup });
+        }
+
+        const res = await fetch('/pos/api/price-rules', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ rules: updatedRules })
+        });
+
+        if (res.ok) {
+            closeModal();
+            showAlert('Aturan harga berat berhasil disimpan.', 'Berhasil', '✅');
+            loadPriceRules().then(rules => {
+                if (document.getElementById('price-rules-list-container')) {
+                    renderPriceRulesList(rules);
+                }
+            });
+        } else {
+            showAlert('Gagal menyimpan aturan harga berat.', 'Gagal', '❌');
+        }
+    });
+}
+
+async function deletePriceRuleAction(id) {
+    if (!confirm('Hapus aturan harga ini?')) return;
+    const res = await fetch(`/pos/api/price-rules/${id}`, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+    });
+    if (res.ok) {
+        showAlert('Aturan harga berhasil dihapus.', 'Berhasil', '✅');
+        loadPriceRules().then(rules => {
+            if (document.getElementById('price-rules-list-container')) {
+                renderPriceRulesList(rules);
+            }
+        });
+    }
+}
+
+function calcAutoPriceFromWeight() {
+    const modalVal = parseInt(document.getElementById('field-modal').value, 10) || 0;
+    const weightVal = parseInt(document.getElementById('field-weight').value, 10) || 0;
+    const priceInput = document.getElementById('field-price');
+    const hintEl = document.getElementById('weight-calc-hint');
+
+    if (!weightVal || !modalVal) {
+        if (hintEl) hintEl.innerText = '';
+        return;
+    }
+
+    const matchingRule = PRICE_RULES.find(r => weightVal >= r.min_weight && weightVal <= r.max_weight);
+    if (matchingRule) {
+        const calculatedPrice = modalVal + matchingRule.markup_price;
+        priceInput.value = calculatedPrice;
+        if (hintEl) {
+            hintEl.innerText = `💡 Auto-Kalkulasi: Modal (${formatRupiah(modalVal)}) + Margin (${formatRupiah(matchingRule.markup_price)}) = ${formatRupiah(calculatedPrice)}`;
+            hintEl.style.color = '#10b981';
+        }
+    } else {
+        if (hintEl) {
+            hintEl.innerText = `⚠️ Belum ada aturan margin untuk berat ${weightVal} gram.`;
+            hintEl.style.color = '#ef4444';
+        }
+    }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.menu-item').forEach(btn => btn.addEventListener('click', () => showPage(btn.dataset.page)));
     bindProductForm();
@@ -3517,6 +3718,12 @@ window.addEventListener('DOMContentLoaded', () => {
     bindChangePinForm();
     bindGlobalDiscountForm();
     loadOutlets();
+    loadPriceRules();
+
+    const fieldModal = document.getElementById('field-modal');
+    const fieldWeight = document.getElementById('field-weight');
+    if (fieldModal) fieldModal.addEventListener('input', calcAutoPriceFromWeight);
+    if (fieldWeight) fieldWeight.addEventListener('input', calcAutoPriceFromWeight);
     
     // Bind login form
     document.getElementById('login-form').addEventListener('submit', handleLogin);
