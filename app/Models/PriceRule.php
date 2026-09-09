@@ -13,11 +13,13 @@ class PriceRule extends Model
         'min_weight',
         'max_weight',
         'markup_price',
+        'markup_percent',
     ];
 
     protected $casts = [
         'min_weight' => 'integer',
         'max_weight' => 'integer',
         'markup_price' => 'integer',
+        'markup_percent' => 'integer',
     ];
 }

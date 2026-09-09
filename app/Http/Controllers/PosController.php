@@ -543,7 +543,8 @@ class PosController extends Controller
             'rules' => 'required|array',
             'rules.*.min_weight' => 'required|integer|min:0',
             'rules.*.max_weight' => 'required|integer|min:0',
-            'rules.*.markup_price' => 'required|integer|min:0',
+            'rules.*.markup_price' => 'nullable|integer|min:0',
+            'rules.*.markup_percent' => 'nullable|integer|min:0',
         ]);
 
         \App\Models\PriceRule::query()->delete();

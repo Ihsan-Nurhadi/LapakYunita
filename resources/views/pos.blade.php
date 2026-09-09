@@ -812,7 +812,11 @@
             <label>Maksimal Berat (gram)</label>
             <input type="number" id="rule-max-weight" required min="0" placeholder="Contoh: 500" />
             <label>Tambahan Margin / Mark-up (Rp)</label>
-            <input type="number" id="rule-markup-price" required min="0" placeholder="Contoh: 12000" />
+            <input type="number" id="rule-markup-price" min="0" placeholder="Contoh: 12000" />
+            <div style="text-align: center; color: #64748b; font-weight: bold; font-size: 0.8rem; margin: 8px 0 2px;">— ATAU —</div>
+            <label style="margin-top: 0;">Persentase Margin (%)</label>
+            <input type="number" id="rule-markup-percent" min="0" max="100" placeholder="Contoh: 15" />
+            <small style="display:block; color:#64748b; font-size:0.78rem; margin-top:4px;">*Pilih salah satu: isi Rupiah ATAU Persen (%)</small>
             <div class="modal-actions">
                 <button type="button" class="secondary-btn" onclick="closeModal()">Batal</button>
                 <button type="submit" class="primary-btn">Simpan Aturan</button>
@@ -3599,18 +3603,24 @@ function renderPriceRulesList(rules) {
         return;
     }
 
-    container.innerHTML = rules.map((r, index) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid rgba(15,23,42,0.06); padding:14px 18px; border-radius:16px;">
-            <div>
-                <span style="font-weight:700; color:#0f172a; font-size:1rem;">Range Berat: ${r.min_weight} - ${r.max_weight} gram</span>
-                <div style="font-size:0.88rem; color:#10b981; font-weight:600; margin-top:2px;">Tambahan Margin: + ${formatRupiah(r.markup_price)}</div>
+    container.innerHTML = rules.map((r, index) => {
+        const marginLabel = (r.markup_percent && r.markup_percent > 0)
+            ? `Persentase Margin: + ${r.markup_percent}%`
+            : `Tambahan Margin: + ${formatRupiah(r.markup_price || 0)}`;
+
+        return `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid rgba(15,23,42,0.06); padding:14px 18px; border-radius:16px;">
+                <div>
+                    <span style="font-weight:700; color:#0f172a; font-size:1rem;">Range Berat: ${r.min_weight} - ${r.max_weight} gram</span>
+                    <div style="font-size:0.88rem; color:#10b981; font-weight:600; margin-top:2px;">${marginLabel}</div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn-edit" onclick="openEditPriceRuleModal(${index})">Edit</button>
+                    <button type="button" class="btn-delete" onclick="deletePriceRuleAction(${r.id})">Hapus</button>
+                </div>
             </div>
-            <div style="display:flex; gap:8px;">
-                <button type="button" class="btn-edit" onclick="openEditPriceRuleModal(${index})">Edit</button>
-                <button type="button" class="btn-delete" onclick="deletePriceRuleAction(${r.id})">Hapus</button>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function openAddPriceRuleModal() {
@@ -3619,6 +3629,7 @@ function openAddPriceRuleModal() {
     document.getElementById('rule-min-weight').value = '';
     document.getElementById('rule-max-weight').value = '';
     document.getElementById('rule-markup-price').value = '';
+    document.getElementById('rule-markup-percent').value = '';
     document.getElementById('price-rule-modal').classList.remove('hidden');
 }
 
@@ -3629,26 +3640,57 @@ function openEditPriceRuleModal(index) {
     document.getElementById('price-rule-index').value = index;
     document.getElementById('rule-min-weight').value = rule.min_weight;
     document.getElementById('rule-max-weight').value = rule.max_weight;
-    document.getElementById('rule-markup-price').value = rule.markup_price;
+    document.getElementById('rule-markup-price').value = rule.markup_price || '';
+    document.getElementById('rule-markup-percent').value = rule.markup_percent || '';
     document.getElementById('price-rule-modal').classList.remove('hidden');
 }
 
 function bindPriceRuleForm() {
     const form = document.getElementById('price-rule-form');
+    const priceInput = document.getElementById('rule-markup-price');
+    const percentInput = document.getElementById('rule-markup-percent');
+
+    if (priceInput && !priceInput.dataset.bound) {
+        priceInput.dataset.bound = 'true';
+        priceInput.addEventListener('input', () => {
+            if (priceInput.value !== '') percentInput.value = '';
+        });
+    }
+
+    if (percentInput && !percentInput.dataset.bound) {
+        percentInput.dataset.bound = 'true';
+        percentInput.addEventListener('input', () => {
+            if (percentInput.value !== '') priceInput.value = '';
+        });
+    }
+
     if (!form || form.dataset.bound) return;
     form.dataset.bound = 'true';
+
     form.addEventListener('submit', async e => {
         e.preventDefault();
         const index = parseInt(document.getElementById('price-rule-index').value, 10);
         const minW = parseInt(document.getElementById('rule-min-weight').value, 10) || 0;
         const maxW = parseInt(document.getElementById('rule-max-weight').value, 10) || 0;
-        const markup = parseInt(document.getElementById('rule-markup-price').value, 10) || 0;
+        const markupPrice = parseInt(document.getElementById('rule-markup-price').value, 10) || 0;
+        const markupPercent = parseInt(document.getElementById('rule-markup-percent').value, 10) || 0;
+
+        if (!markupPrice && !markupPercent) {
+            return showAlert('Isi salah satu: Tambahan Margin (Rp) ATAU Persentase Margin (%).', 'Perhatian', '⚠️');
+        }
+
+        const rulePayload = {
+            min_weight: minW,
+            max_weight: maxW,
+            markup_price: markupPercent > 0 ? 0 : markupPrice,
+            markup_percent: markupPrice > 0 ? 0 : markupPercent
+        };
 
         let updatedRules = [...PRICE_RULES];
         if (index >= 0 && index < updatedRules.length) {
-            updatedRules[index] = { min_weight: minW, max_weight: maxW, markup_price: markup };
+            updatedRules[index] = rulePayload;
         } else {
-            updatedRules.push({ min_weight: minW, max_weight: maxW, markup_price: markup });
+            updatedRules.push(rulePayload);
         }
 
         const res = await fetch('/pos/api/price-rules', {
@@ -3703,10 +3745,22 @@ function calcAutoPriceFromWeight() {
 
     const matchingRule = PRICE_RULES.find(r => weightVal >= r.min_weight && weightVal <= r.max_weight);
     if (matchingRule) {
-        const calculatedPrice = modalVal + matchingRule.markup_price;
+        let calculatedPrice = modalVal;
+        let hintText = '';
+
+        if (matchingRule.markup_percent && matchingRule.markup_percent > 0) {
+            const percentAmount = Math.round(modalVal * (matchingRule.markup_percent / 100));
+            calculatedPrice = modalVal + percentAmount;
+            hintText = `💡 Auto-Kalkulasi: Modal (${formatRupiah(modalVal)}) + Margin ${matchingRule.markup_percent}% (${formatRupiah(percentAmount)}) = ${formatRupiah(calculatedPrice)}`;
+        } else {
+            const markupPrice = matchingRule.markup_price || 0;
+            calculatedPrice = modalVal + markupPrice;
+            hintText = `💡 Auto-Kalkulasi: Modal (${formatRupiah(modalVal)}) + Margin (${formatRupiah(markupPrice)}) = ${formatRupiah(calculatedPrice)}`;
+        }
+
         priceInput.value = calculatedPrice;
         if (hintEl) {
-            hintEl.innerText = `💡 Auto-Kalkulasi: Modal (${formatRupiah(modalVal)}) + Margin (${formatRupiah(matchingRule.markup_price)}) = ${formatRupiah(calculatedPrice)}`;
+            hintEl.innerText = hintText;
             hintEl.style.color = '#10b981';
         }
     } else {

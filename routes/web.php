@@ -49,13 +49,20 @@ Route::get('/run-migration-price-rules', function () {
                 $table->integer('min_weight')->default(0);
                 $table->integer('max_weight')->default(0);
                 $table->integer('markup_price')->default(0);
+                $table->integer('markup_percent')->default(0);
                 $table->timestamps();
             });
 
             \Illuminate\Support\Facades\DB::table('price_rules')->insert([
-                ['min_weight' => 1, 'max_weight' => 500, 'markup_price' => 12000, 'created_at' => now(), 'updated_at' => now()],
-                ['min_weight' => 501, 'max_weight' => 900, 'markup_price' => 16500, 'created_at' => now(), 'updated_at' => now()],
+                ['min_weight' => 1, 'max_weight' => 500, 'markup_price' => 12000, 'markup_percent' => 0, 'created_at' => now(), 'updated_at' => now()],
+                ['min_weight' => 501, 'max_weight' => 900, 'markup_price' => 16500, 'markup_percent' => 0, 'created_at' => now(), 'updated_at' => now()],
             ]);
+        } else {
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('price_rules', 'markup_percent')) {
+                \Illuminate\Support\Facades\Schema::table('price_rules', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->integer('markup_percent')->nullable()->default(0);
+                });
+            }
         }
 
         if (!\Illuminate\Support\Facades\Schema::hasColumn('products', 'weight')) {
@@ -64,7 +71,7 @@ Route::get('/run-migration-price-rules', function () {
             });
         }
 
-        return response()->json(['success' => true, 'message' => 'Migration Aiven Price Rules Berhasil! Tabel price_rules & kolom weight telah ditambahkan.']);
+        return response()->json(['success' => true, 'message' => 'Migration Aiven Price Rules Berhasil! Tabel price_rules, kolom markup_percent & kolom weight telah ditambahkan.']);
     } catch (\Exception $e) {
         return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
     }
